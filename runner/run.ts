@@ -64,15 +64,33 @@ const isGeneric = specsDir !== "specs";
 await mkdir(outDir, { recursive: true }); // record() writes report.json here from the very first step
 
 async function runGeneric(): Promise<void> {
-  const glob = new Bun.Glob("*.3md");
-  const files = Array.from(glob.scanSync({ cwd: specsDir })).sort();
-  if (files.length === 0) log(`  no .3md files found under ${specsDir}`);
-  for (const file of files) {
+  const md3Files = Array.from(new Bun.Glob("*.3md").scanSync({ cwd: specsDir })).sort();
+  const stepsFiles = Array.from(new Bun.Glob("*.steps.toml").scanSync({ cwd: specsDir })).sort();
+  if (md3Files.length === 0 && stepsFiles.length === 0) log(`  no .3md or .steps.toml files found under ${specsDir}`);
+
+  for (const file of md3Files) {
     const specPath = `${specsDir}/${file}`;
     const dir = file.replace(/\.3md$/, "");
     log(`\n=== ${specPath} ===`);
     const agent = await loadAgent(specPath);
     await mkdir(`${outDir}/${dir}`, { recursive: true });
+    await runSkillsGeneric(agent, dir);
+  }
+
+  for (const file of stepsFiles) {
+    const specPath = `${specsDir}/${file}`;
+    const dir = file.replace(/\.steps\.toml$/, "");
+    log(`\n=== ${specPath} (compiled from .steps.toml) ===`);
+    const absPath = specPath.startsWith("/") ? specPath : `${process.cwd()}/${specPath}`;
+    const mod = await import(absPath);
+    const compiled = compileStepsToml(mod.default as StepsToml, specPath);
+    const agent = loadAgentFromSource(compiled, specPath);
+    await mkdir(`${outDir}/${dir}`, { recursive: true });
+    await runSkillsGeneric(agent, dir);
+  }
+}
+
+async function runSkillsGeneric(agent: Agent, dir: string): Promise<void> {
     const skills = [...agent.manifest().skills].sort((a, b) => a.z - b.z);
     for (const s of skills) {
       // cost="expected-fail" is magpie's own convention (cost is a free-form
@@ -100,15 +118,62 @@ async function runGeneric(): Promise<void> {
       await Bun.write(logPath, `$ ${cmd}\n\n--- stdout ---\n${e.stdout}\n--- stderr ---\n${e.stderr}\n`);
       record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: e.exitCode, ok: e.exitCode === 0, note: (e.stdout.trim() || e.stderr.trim()).slice(0, 200), durationMs: e.durationMs, artifacts: [logPath], critical: !expectedFail });
     }
-  }
+}
+
+function loadAgentFromSource(src: string, label: string): Agent {
+  const report = validateAgent(src);
+  log(formatReport(label, report));
+  if (!report.ok) throw new Error(`${label} failed agent3md validation`);
+  return new Agent(src);
 }
 
 async function loadAgent(specPath: string): Promise<Agent> {
   const src = await Bun.file(specPath).text();
-  const report = validateAgent(src);
-  log(formatReport(specPath, report));
-  if (!report.ok) throw new Error(`${specPath} failed agent3md validation`);
-  return new Agent(src);
+  return loadAgentFromSource(src, specPath);
+}
+
+// A .steps.toml is a much lower-friction way to write a spec than
+// hand-authoring .3md directly: no frontmatter ceremony, no manual
+// z-numbering, no triggers to invent when routing was never the point,
+// no [[z=N|...]] dependency-link syntax to accidentally cycle — this
+// session hit that exact mistake three separate times hand-writing .3md
+// by hand. It compiles to a real, fully valid agent.3md in memory: same
+// parser, same validation, same guarantees. This is an authoring
+// convenience layered on top of the format, not a second engine.
+interface StepsToml {
+  agent: string;
+  persona?: string;
+  steps: { name: string; run: string; expect_fail?: boolean }[];
+}
+
+function compileStepsToml(data: StepsToml, sourceFile: string): string {
+  if (!data.agent) throw new Error(`${sourceFile}: missing required top-level "agent" key`);
+  if (!Array.isArray(data.steps) || data.steps.length === 0) throw new Error(`${sourceFile}: needs at least one [[steps]] entry`);
+  const lines = [
+    "---",
+    "3md: 1.0",
+    "axis: skill",
+    `agent: ${data.agent}`,
+    ...(data.persona ? [`persona: ${data.persona}`] : []),
+    "---",
+    `Compiled in-memory from ${sourceFile} by runner/run.ts's .steps.toml support — edit the source, not this generated form.`,
+    "",
+    `@plane z=0 label="${data.agent}" kind=identity`,
+    `# ${data.agent}`,
+    "",
+  ];
+  data.steps.forEach((step, i) => {
+    if (!step.name || !step.run) throw new Error(`${sourceFile}: step ${i} needs both "name" and "run"`);
+    // Same constraint hand-written tool= always had — a double quote
+    // breaks the attribute it's embedded in. A wrapper script (see
+    // scripts/*.sh elsewhere in this repo) is the documented way around
+    // it, same as it's always been.
+    if (step.run.includes('"')) throw new Error(`${sourceFile}: step "${step.name}"'s run contains a double quote, which breaks the compiled tool= attribute — write a wrapper script instead`);
+    const cost = step.expect_fail ? ` cost="expected-fail"` : "";
+    lines.push(`@plane z=${i + 1} label="${step.name}" kind=skill triggers="${step.name}" tool="${step.run}"${cost}`);
+    lines.push(`# Skill: ${step.name}`, "");
+  });
+  return lines.join("\n");
 }
 
 // Default 2 minutes: a real, observed CI run needed 82s for a single

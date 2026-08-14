@@ -105,6 +105,35 @@ fledge.toml, AGENTS.md, .trust.toml, .augur.toml, .attest.json
   unfilled `{placeholder}` is skipped with a clear reason instead of run
   broken.
 
+Writing raw `.3md` by hand for the generic case is more ceremony than the
+common case needs — frontmatter, manual `z` numbers, inventing trigger
+phrases when routing was never the point, and `[[z=N|...]]` dependency
+links that are surprisingly easy to point the wrong way into an
+accidental cycle (this repo's own specs did that three separate times).
+For a flat list of steps with no routing/dependency needs, a
+**`*.steps.toml`** in the same specs-dir is a much lower-friction
+alternative — same rules (bare commands only), compiled to a real,
+fully-validated `agent.3md` in memory before it runs:
+
+```toml
+agent = "quick-steps"
+persona = "optional, one line"
+
+[[steps]]
+name = "hello"
+run = "echo hello"
+
+[[steps]]
+name = "broken-on-purpose"
+run = "false"
+expect_fail = true   # reported as FAIL, but doesn't fail the whole job — see magpie-sandbox
+```
+
+A skill needing `{placeholder}`-style parameterization, routing by
+natural language, or `[[z=N|...]]` dependencies still needs real `.3md` —
+`.steps.toml` only covers the bare-command case, which is also the only
+case generic mode itself ever executes.
+
 `.github/workflows/test.yml` is a reusable workflow (`on: workflow_call`).
 Another repo adds:
 

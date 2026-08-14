@@ -3,12 +3,14 @@
 axis: skill
 agent: web-tester
 tools: sh, screencapture
-persona: drives real Safari via System Events UI-scripting and captures a real screenshot, no headless browser
+persona: drives real Google Chrome via System Events UI-scripting and captures a real screenshot, no headless browser
 ---
-Test agent for the Web target. Uses Safari itself (already installed, no
+Test agent for the Web target. Uses Google Chrome (already installed, no
 Playwright/Chromium download needed) as the driver, automated through
 AppleScript — the same Accessibility bridge the macOS target uses for native
-apps.
+apps. Chrome, not Safari, deliberately: this drives a real GUI browser
+window, and Chrome isn't the daily-driver browser on the machines this
+gets developed/tested on.
 
 @plane z=0 label="web-tester" kind=identity
 # web-tester
@@ -19,8 +21,8 @@ capture a screenshot artifact.
 @plane z=1 label="open" kind=skill triggers="web, page, url, browser, navigate, load" inputs="url:string" tool="sh scripts/web-open.sh {url}"
 # Skill: open
 
-Open {url} in Safari via System Events keystrokes (not Safari's own Apple
-Events dictionary — see scripts/web-open.sh for why) and return the
+Open {url} in Google Chrome via System Events keystrokes (not Chrome's own
+Apple Events dictionary — see scripts/web-open.sh for why) and return the
 resulting front window's name. Assert it is non-empty.
 
 @plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="path:string" tool="screencapture -x {path}" cost="fs"

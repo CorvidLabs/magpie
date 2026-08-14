@@ -21,9 +21,14 @@ command for real.
    don't run in an isolated sandbox on a dev machine — they act on
    whatever's actually running there. A session that ran these "just to
    test locally" opened, navigated, and then force-killed the operator's
-   real Safari. CLI/HTTP/file-based steps are fine to run locally; a step
-   that opens, drives, or kills a GUI application is not, full stop —
-   push it and let CI verify instead.
+   real Safari — twice, the second time via `--targets=`, which is a
+   documented no-op in generic mode and so didn't scope anything. CLI/
+   HTTP/file-based steps are fine to run locally; a step that opens,
+   drives, or kills a GUI application is not, full stop — push it and let
+   CI verify instead. The web driver now targets Google Chrome rather
+   than Safari specifically because Chrome isn't the operator's
+   daily-driver browser, but that's a blast-radius reduction, not
+   permission to run these steps locally — the rule above still applies.
 3. **Every `tool=` must render cleanly.** No unfilled `{placeholder}` in
    a rendered command, no dependency cycles in `[[z=N|...]]` links —
    `bun run validate` (or `fledge lanes run verify`) catches both before

@@ -31,10 +31,11 @@ machine's TCC settings.
   - **API** → `fledge http-get` (CorvidLabs/fledge-plugin-http)
   - **CLI** → `fledge rune run` (CorvidLabs/rune) — PTY-wrapped, so output
     matches a real terminal even for tools that behave differently headless
-  - **Web** → Safari, driven through `System Events` keystrokes
-    (`scripts/web-open.sh`) — not Safari's own AppleScript dictionary,
+  - **Web** → Google Chrome, driven through `System Events` keystrokes
+    (`scripts/web-open.sh`) — not Chrome's own AppleScript dictionary,
     which needs a macOS Automation consent grant a fresh CI runner doesn't
-    have
+    have. Chrome rather than Safari deliberately: this drives a real GUI
+    browser window, and Chrome isn't anyone's daily-driver browser here
   - **macOS** → a launched app's Accessibility tree, read via
     `System Events` (`scripts/macos-launch.sh`) — the same bridge a native
     `AXUIElement` adapter would call
@@ -63,8 +64,8 @@ machine's TCC settings.
   not something fixable from this repo's workflow file. Every "Run …
   targets" step also carries a hard `timeout-minutes`, after a first macOS
   run hung indefinitely — likely a macOS Automation/Apple-Events consent
-  dialog for AppleScript-driven Safari/Calculator control, with no one there
-  to click "Allow." Disposable runners still sidestep the class of problem
+  dialog for AppleScript-driven browser/Calculator control, with no one
+  there to click "Allow." Disposable runners still sidestep the class of problem
   this project ran into locally during development: macOS's Screen Recording
   permission is a one-time, per-host grant, so a sandboxed local process
   can't `screencapture` or record video without it, no matter how correct

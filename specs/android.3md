@@ -2,28 +2,39 @@
 3md: 1.0
 axis: skill
 agent: android-tester
-persona: documents the real Android driver path as guidance only, since this sandbox has no emulator or adb
+tools: adb, sh
+persona: drives a real Android emulator via adb — first real (non-guidance) pass at this target
 ---
-Test agent for the Android target. No `tool` bindings: this sandbox has no
-emulator and no `adb`, so every skill here is guidance-only per the agent3md
-spec — the exact case the format designs for when a step can't be bound to a
-real command. A host with `adb` and a running AVD would give these skills real
-`tool=` bindings, the same shape as the iOS spec's, just a different wire
-tool.
+Test agent for the Android target. Previously guidance-only (no `adb` or
+emulator in the interactive dev sandbox this was first written in) — this
+is the first real pass, proven via CI where
+`reactivecircus/android-emulator-runner` provides an actual booted
+emulator. That action owns the emulator's own lifecycle (boot, shutdown)
+for the duration of one step; unlike specs/ios.3md there's no separate
+boot/shutdown skill here, because the emulator only exists inside that
+one step, not across the whole job.
 
 @plane z=0 label="android-tester" kind=identity
 # android-tester
 
-No bound commands are runnable here — route the request to the matching
-skill and follow its guidance with whatever Android tooling the host actually
-has.
+Assume a booted emulator already exists — the caller's job is responsible
+for that. Just prove `adb` can see it and pull real evidence back.
 
-@plane z=1 label="run" kind=skill triggers="android, apk, emulator, adb, device"
-# Skill: run
+@plane z=1 label="devices" kind=skill triggers="devices, adb, list, connected" tool="adb devices"
+# Skill: devices
 
-Guidance only (no `adb` in this sandbox). On a host with the Android SDK:
-boot an AVD (`emulator -avd <name>`), install with `adb install <apk>`,
-screenshot with `adb exec-out screencap -p > out.png`, and record with
-`adb shell screenrecord /sdcard/out.mp4` (pull it back with `adb pull`
-afterward) — the same boot → open → capture → teardown lifecycle as the iOS
-spec, just a different underlying tool.
+Lists connected devices/emulators. Proves `adb` can see a live emulator
+before trying anything else with it.
+
+@plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" tool="sh scripts/android-screenshot.sh artifacts/android/screenshot.png"
+# Skill: screenshot
+
+`adb exec-out screencap` writes binary PNG data — needs a real file
+redirect, not this engine's own text-based stdout capture, hence the
+wrapper script. Requires [[z=1|devices]].
+
+@plane z=3 label="record" kind=skill triggers="video, record, recording, screen capture" tool="sh scripts/android-record.sh artifacts/android/recording.mp4 3"
+# Skill: record
+
+Records on-device via `adb shell screenrecord`, then pulls the file back
+to the host. Requires [[z=1|devices]].

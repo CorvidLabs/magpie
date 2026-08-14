@@ -138,8 +138,49 @@ jobs:
           name: macos-artifacts
           path: artifacts/
 
-  # Android is guidance-only in specs/android.3md today — no tool= bindings.
-  # reactivecircus/android-emulator-runner (works on macos-latest, has KVM)
-  # is the natural way to turn it into a real adapter; left out of this
-  # workflow until that spec is written and proven, same discipline as the
-  # other five targets.
+  android:
+    name: Android (emulator)
+    # Magpie's own specs/android.3md only — not part of the workflow_call
+    # generalization. A caller repo's checkout has no specs/android.3md
+    # (or wouldn't want this run at all), so this only runs when the
+    # workflow's own repo is magpie, never for MacNTop/fledge/a sandbox
+    # invoking it via workflow_call. github.repository reflects the
+    # CALLING repo inside a reusable-workflow job, which is exactly the
+    # distinction needed here — unlike inputs.*, this doesn't hit the
+    # null-coercion trap documented above.
+    if: ${{ github.repository == 'CorvidLabs/magpie' }}
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install fledge
+        run: curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
+
+      - name: Install deps
+        run: bun install
+
+      # reactivecircus/android-emulator-runner owns the emulator's whole
+      # boot -> script -> shutdown lifecycle inside this one step (unlike
+      # simctl, there's no persistent OS-level emulator to boot in an
+      # earlier step and reuse in a later one). arm64-v8a matches
+      # macos-latest's Apple Silicon hardware — x86_64 emulation there
+      # would be much slower.
+      - name: Run Android target (emulator boots and shuts down within this step)
+        timeout-minutes: 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: arm64-v8a
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader-indirect -noaudio -no-boot-anim
+          script: bun runner/run.ts --targets=android
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: artifacts/

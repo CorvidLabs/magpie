@@ -270,15 +270,32 @@ if (shouldRun("ios")) {
   record({ target: "ios", skill: down.name, z: down.z, routedVia: null, command: cmdDown, exitCode: eDown.exitCode, ok: eDown.exitCode === 0, note: "shut down, no simulator left running", durationMs: eDown.durationMs, artifacts: [] });
 }
 
-// ============================== Android (stub) ==============================
-log("\n=== Android target (specs/android.3md — guidance-only, no adb here) ===");
+// ============================== Android ==============================
+// First real (non-guidance) pass — proven via reactivecircus/android-
+// emulator-runner, which owns the emulator's boot/shutdown lifecycle for
+// the duration of one CI step. Nothing to boot/teardown here ourselves.
+log("\n=== Android target (specs/android.3md) ===");
 if (shouldRun("android")) {
   const agent = await loadAgent("specs/android.3md");
-  const req = "install and test the android app on an emulator";
+
+  const req = "list connected android devices";
   const [m1] = agent.route(req);
   log(`  routed "${req}" -> ${m1.skill.name} (hits: ${m1.hits.join(", ")})`);
-  const cmd = agent.command(m1.skill.name); // null: guidance-only skill, by design
-  record({ target: "android", skill: m1.skill.name, z: m1.skill.z, routedVia: req, command: cmd, exitCode: null, ok: cmd === null, note: "guidance-only: no adb in this sandbox — matches the spec's tool-less path exactly", durationMs: 0, artifacts: [] });
+  const cmd1 = agent.command(m1.skill.name)!;
+  const e1 = await exec(cmd1);
+  await Bun.write("artifacts/android/devices.txt", e1.stdout);
+  const hasDevice = /\bdevice\b/.test(e1.stdout) && !/^List of devices attached\s*$/.test(e1.stdout.trim());
+  record({ target: "android", skill: m1.skill.name, z: m1.skill.z, routedVia: req, command: cmd1, exitCode: e1.exitCode, ok: e1.exitCode === 0 && hasDevice, note: e1.stdout.trim().slice(0, 200) || "no devices listed", durationMs: e1.durationMs, artifacts: ["artifacts/android/devices.txt"] });
+
+  const shot = agent.get("screenshot")!;
+  const cmdShot = agent.command(shot.name)!;
+  const eShot = await exec(cmdShot);
+  record({ target: "android", skill: shot.name, z: shot.z, routedVia: null, command: cmdShot, exitCode: eShot.exitCode, ok: eShot.exitCode === 0, note: "screenshot of live emulator", durationMs: eShot.durationMs, artifacts: ["artifacts/android/screenshot.png"] });
+
+  const rec = agent.get("record")!;
+  const cmdRec = agent.command(rec.name)!;
+  const eRec = await exec(cmdRec);
+  record({ target: "android", skill: rec.name, z: rec.z, routedVia: null, command: cmdRec, exitCode: eRec.exitCode, ok: eRec.exitCode === 0, note: "3s screen recording", durationMs: eRec.durationMs, artifacts: ["artifacts/android/recording.mp4"] });
 }
 
 } // end of magpie's own hardcoded target sections (isGeneric === false)

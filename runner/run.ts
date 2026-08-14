@@ -53,6 +53,7 @@ const outDirArg = process.argv.find((a) => a.startsWith("--out-dir="));
 const specsDir = specsDirArg ? specsDirArg.slice("--specs-dir=".length) : "specs";
 const outDir = outDirArg ? outDirArg.slice("--out-dir=".length) : "artifacts";
 const isGeneric = specsDir !== "specs";
+await mkdir(outDir, { recursive: true }); // record() writes report.json here from the very first step
 
 async function runGeneric(): Promise<void> {
   const glob = new Bun.Glob("*.3md");
@@ -107,6 +108,12 @@ function record(r: StepResult) {
   const badge = r.ok ? "PASS" : "FAIL";
   log(`  [${badge}] ${r.target}/${r.skill} — ${r.note} (${r.durationMs}ms)`);
   if (r.command) log(`         $ ${r.command}`);
+  // Written after every step, not just at the end: a run.ts process killed
+  // mid-flight by a step timeout (this has happened) otherwise loses the
+  // whole structured report even though individual artifacts survive.
+  // Fire-and-forget is fine here — worst case the very last step's write
+  // loses a race with process exit, which beats losing everything.
+  Bun.write(`${outDir}/report.json`, JSON.stringify(results, null, 2)).catch(() => {});
 }
 
 if (isGeneric) {

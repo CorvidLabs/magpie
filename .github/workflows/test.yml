@@ -8,23 +8,31 @@ on:
 
 jobs:
   linux:
-    name: API + CLI (ubuntu)
+    name: CLI (ubuntu)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
+      # fledge-plugin-http is a Swift package that calls Darwin-only
+      # Foundation/CoreFoundation APIs (HTTPURLResponse.statusCode,
+      # CFGetTypeID, ...) and does not build under swift-corelibs-foundation
+      # on Linux — a real upstream portability bug, not a flag we can pass
+      # around. cli only needs fledge + rune (both plain Rust, build fine
+      # here), so the api target runs on the macos job instead, where that
+      # plugin is on native Darwin Foundation.
       - name: Install fledge + plugins
         run: |
           cargo install fledge
           fledge plugins install --non-interactive --yes CorvidLabs/rune
-          fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
 
       - name: Install deps
         run: bun install
 
-      - name: Run API + CLI targets
-        run: bun runner/run.ts --targets=api,cli
+      - name: Run CLI target
+        timeout-minutes: 5
+        run: bun runner/run.ts --targets=cli
 
       - name: Upload artifacts
         if: always()
@@ -34,22 +42,31 @@ jobs:
           path: artifacts/
 
   macos:
-    name: Web + macOS + iOS (macos)
+    name: API + Web + macOS + iOS (macos)
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
       - name: Install fledge + plugins
         run: |
-          brew install corvidlabs/tap/fledge corvidlabs/tap/rune
+          brew install corvidlabs/tap/fledge
           fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
 
       - name: Install deps
         run: bun install
 
-      - name: Run web + macOS + iOS targets
-        run: bun runner/run.ts --targets=web,macos,ios
+      # Bounded on purpose: the first run of this job hung indefinitely here
+      # with no other signal (likely a macOS Automation/Apple-Events consent
+      # dialog for AppleScript controlling Safari or Calculator, with no one
+      # present to click "Allow" — distinct from the Screen Recording
+      # permission issue). A hard timeout turns a silent CI-minutes leak into
+      # a clear failure, and "Upload artifacts" below still runs on timeout
+      # so partial per-step JSON/screenshots survive for diagnosis.
+      - name: Run API + web + macOS + iOS targets
+        timeout-minutes: 8
+        run: bun runner/run.ts --targets=api,web,macos,ios
 
       - name: Upload artifacts
         if: always()

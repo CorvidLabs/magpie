@@ -29,12 +29,20 @@ simulated anything. Runs on GitHub-hosted runners, not anyone's laptop.
     `agent3md` spec explicitly designs for this case. Next step:
     [`reactivecircus/android-emulator-runner`](https://github.com/reactivecircus/android-emulator-runner).
 - **CI, not a laptop.** `.github/workflows/test.yml` splits targets across
-  GitHub-hosted runners (`ubuntu-latest` for API/CLI, `macos-latest` for
-  web/macOS/iOS — Xcode + simulators ship preinstalled). Disposable runners
-  sidestep the exact class of problem this project ran into locally during
-  development: macOS's Screen Recording permission is a one-time, per-host
-  grant, so a sandboxed local process can't `screencapture` or record video
-  without it, no matter how correct the command is.
+  GitHub-hosted runners: `ubuntu-latest` runs CLI only, `macos-latest` runs
+  API/web/macOS/iOS (Xcode + simulators ship preinstalled). API moved off
+  Linux after the first real run: `fledge-plugin-http` is a Swift package
+  that calls Darwin-only Foundation/CoreFoundation APIs and doesn't build
+  under swift-corelibs-foundation on Linux — a real upstream portability
+  bug, not something fixable from this repo's workflow file. Every "Run …
+  targets" step also carries a hard `timeout-minutes`, after a first macOS
+  run hung indefinitely — likely a macOS Automation/Apple-Events consent
+  dialog for AppleScript-driven Safari/Calculator control, with no one there
+  to click "Allow." Disposable runners still sidestep the class of problem
+  this project ran into locally during development: macOS's Screen Recording
+  permission is a one-time, per-host grant, so a sandboxed local process
+  can't `screencapture` or record video without it, no matter how correct
+  the command is.
 
 ## Running it
 

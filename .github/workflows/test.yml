@@ -105,7 +105,15 @@ jobs:
 
       - name: Run CLI target
         timeout-minutes: 5
-        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} --out-dir=artifacts --targets=${{ inputs.linux-targets || 'cli' }}
+        # --generic is the authoritative signal, not the --specs-dir value
+        # itself: inputs.specs-dir is reliably '' on magpie's own direct
+        # triggers (same null-coercion behavior the "none" sentinel above
+        # relies on) and only ever non-empty when a real caller set it via
+        # workflow_call — unlike comparing paths, this can't collide with
+        # whatever string a caller happens to choose (a real run hit
+        # exactly that: magpie-sandbox's own --specs-dir=.magpie/specs
+        # coincidentally equals this engine's own default).
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} ${{ inputs.specs-dir != '' && '--generic' || '' }} --out-dir=artifacts --targets=${{ inputs.linux-targets || 'cli' }}
 
       - name: Upload artifacts
         if: always()
@@ -165,7 +173,9 @@ jobs:
         timeout-minutes: 8
         env:
           MAGPIE_BROWSER: Safari
-        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
+        # See the linux job's identical run: step for why --generic is
+        # passed explicitly instead of inferred from --specs-dir's value.
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} ${{ inputs.specs-dir != '' && '--generic' || '' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
 
       - name: Upload artifacts
         if: always()

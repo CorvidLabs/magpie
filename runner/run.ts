@@ -63,11 +63,28 @@ const shouldRun = (target: string) => !requestedTargets || requestedTargets.incl
 // .specsync/config.toml, which reclaimed the bare name once this moved).
 // A testbed meant to be dropped into other people's real projects
 // shouldn't force them to rename something that was already there first.
+//
+// isGeneric is NOT just "specsDir !== the default" — a real run of
+// magpie-sandbox's own CI hit exactly the collision that comparison
+// invites: the sandbox's own dogfood.yml explicitly passes
+// --specs-dir=.magpie/specs (the exact namespaced convention recommended
+// above), which happens to literally equal magpie's own default,
+// misdetecting a real caller's generic-mode run as magpie's own six-
+// target self-test — and then failing with ENOENT trying to load
+// .magpie/specs/api.3md from a repo that doesn't have it. --generic is
+// an explicit, authoritative flag test.yml passes whenever
+// `inputs.specs-dir` was actually set by a caller (the same
+// null-coercion-aware signal already used for the "none" targets
+// sentinel — inputs.specs-dir is reliably '' on magpie's own direct
+// triggers, never on a real workflow_call). The string-comparison
+// fallback only still matters for someone invoking run.ts directly,
+// bypassing test.yml entirely.
+const genericFlag = process.argv.includes("--generic");
 const specsDirArg = process.argv.find((a) => a.startsWith("--specs-dir="));
 const outDirArg = process.argv.find((a) => a.startsWith("--out-dir="));
 const specsDir = specsDirArg ? specsDirArg.slice("--specs-dir=".length) : ".magpie/specs";
 const outDir = outDirArg ? outDirArg.slice("--out-dir=".length) : "artifacts";
-const isGeneric = specsDir !== ".magpie/specs";
+const isGeneric = genericFlag || specsDir !== ".magpie/specs";
 await mkdir(outDir, { recursive: true }); // record() writes report.json here from the very first step
 
 async function runGeneric(): Promise<void> {

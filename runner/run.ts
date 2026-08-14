@@ -388,12 +388,20 @@ if (shouldRun("android")) {
   const shot = agent.get("screenshot")!;
   const cmdShot = agent.command(shot.name)!;
   const eShot = await exec(cmdShot);
-  record({ target: "android", skill: shot.name, z: shot.z, routedVia: null, command: cmdShot, exitCode: eShot.exitCode, ok: eShot.exitCode === 0, note: "screenshot of live emulator", durationMs: eShot.durationMs, artifacts: ["artifacts/android/screenshot.png"] });
+  record({ target: "android", skill: shot.name, z: shot.z, routedVia: null, command: cmdShot, exitCode: eShot.exitCode, ok: eShot.exitCode === 0, note: eShot.exitCode === 0 ? "screenshot of live emulator" : eShot.stderr.trim().slice(0, 200), durationMs: eShot.durationMs, artifacts: ["artifacts/android/screenshot.png"] });
 
+  // critical: false — same reasoning as ios/open and ios/shutdown: this is
+  // evidence capture, not correctness-proving (devices + screenshot above
+  // already prove the emulator is alive and capturable). Real, currently
+  // undiagnosed CI flake — two consecutive real runs failed fast (~1.4-2s)
+  // with the artifact confirmed never created, but zero stderr either
+  // time; `note` used to be a hardcoded string that hid whatever error
+  // text existed, now shows the real stderr on failure so the next
+  // occurrence is actually diagnosable instead of a silent flake.
   const rec = agent.get("record")!;
   const cmdRec = agent.command(rec.name)!;
   const eRec = await exec(cmdRec);
-  record({ target: "android", skill: rec.name, z: rec.z, routedVia: null, command: cmdRec, exitCode: eRec.exitCode, ok: eRec.exitCode === 0, note: "3s screen recording", durationMs: eRec.durationMs, artifacts: ["artifacts/android/recording.mp4"] });
+  record({ target: "android", skill: rec.name, z: rec.z, routedVia: null, command: cmdRec, exitCode: eRec.exitCode, ok: eRec.exitCode === 0, note: eRec.exitCode === 0 ? "3s screen recording" : eRec.stderr.trim().slice(0, 200) || "failed with no stderr output", durationMs: eRec.durationMs, artifacts: ["artifacts/android/recording.mp4"], critical: false });
 }
 
 } // end of magpie's own hardcoded target sections (isGeneric === false)

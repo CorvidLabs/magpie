@@ -1,0 +1,19 @@
+# fledge.toml — CorvidLabs lifecycle for magpie
+# Docs: https://github.com/CorvidLabs/fledge
+#
+# Single quality gate:
+#   fledge lanes run verify
+
+[tasks]
+# Fast, dependency-free: parses and structurally validates every
+# specs/*.3md. Deliberately NOT the real six-target suite (that's
+# package.json's separate "test" script) — this gate needs to run
+# anywhere, and the real suite needs Safari, an iOS simulator, a live
+# Android emulator, and real network access, none of which belong on a
+# generic verify-gate runner. Real target execution lives in
+# .github/workflows/test.yml's dedicated jobs.
+validate = "bun run validate"
+
+[lanes.verify]
+description = "The single project verification gate"
+steps = ["validate"]

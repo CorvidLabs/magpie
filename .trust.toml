@@ -1,0 +1,22 @@
+schema_version = 1
+profile = "standard"
+
+[lifecycle]
+command = ["fledge", "lanes", "run", "verify"]
+
+[contract]
+enabled = false
+require_coverage = 0
+skip_reason = "specs/ is already agent3md test specs, not spec-sync module contracts \u2014 would need a directory split to adopt spec-sync cleanly"
+
+[risk]
+threshold = "block"
+
+[provenance]
+mode = "soft"
+policy = ".attest.json"
+skip_reason = ""
+
+[atlas]
+enabled = false
+skip_reason = "Atlas publication was not enabled during adoption"

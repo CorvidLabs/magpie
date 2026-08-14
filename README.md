@@ -1,9 +1,13 @@
 # magpie
 
+[![CI](https://github.com/CorvidLabs/magpie/actions/workflows/test.yml/badge.svg)](https://github.com/CorvidLabs/magpie/actions/workflows/test.yml)
+[![Bun](https://img.shields.io/badge/Bun-1.x-fbf0df.svg)](https://bun.sh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A generic cross-platform testbed: one `.3md` spec file per target (web, API,
-iOS, macOS, CLI — Android sketched but not yet wired), each driving *real*
-commands against *real* state. No mocking, no headless-browser download, no
-simulated anything. Runs on GitHub-hosted runners, not anyone's laptop.
+iOS, macOS, CLI, Android), each driving *real* commands against *real*
+state. No mocking, no headless-browser download, no simulated anything.
+Runs on GitHub-hosted runners, not anyone's laptop.
 
 ## Why this shape
 
@@ -18,23 +22,32 @@ simulated anything. Runs on GitHub-hosted runners, not anyone's laptop.
   - **API** → `fledge http-get` (CorvidLabs/fledge-plugin-http)
   - **CLI** → `fledge rune run` (CorvidLabs/rune) — PTY-wrapped, so output
     matches a real terminal even for tools that behave differently headless
-  - **Web** → Safari, driven by AppleScript (`scripts/web-open.applescript`)
+  - **Web** → Safari, driven through `System Events` keystrokes
+    (`scripts/web-open.sh`) — not Safari's own AppleScript dictionary,
+    which needs a macOS Automation consent grant a fresh CI runner doesn't
+    have
   - **macOS** → a launched app's Accessibility tree, read via
     `System Events` (`scripts/macos-launch.sh`) — the same bridge a native
     `AXUIElement` adapter would call
   - **iOS** → `xcrun simctl` directly (boot → open → screenshot → record →
     shutdown), no Appium/WebDriverAgent needed
-  - **Android** → not wired yet. `specs/android.3md` is deliberately
-    guidance-only (no `tool=`) until a real emulator is available — the
-    `agent3md` spec explicitly designs for this case. Next step:
-    [`reactivecircus/android-emulator-runner`](https://github.com/reactivecircus/android-emulator-runner).
+  - **Android** → `adb` against a real emulator that
+    [`reactivecircus/android-emulator-runner`](https://github.com/reactivecircus/android-emulator-runner)
+    boots for the one CI step it runs in (devices → screenshot → record) —
+    unlike `simctl`, that action owns the whole boot/shutdown lifecycle
+    itself, so there's no separate boot/teardown skill the way iOS has one
 - **CI, not a laptop.** `.github/workflows/test.yml` splits targets across
-  GitHub-hosted runners: `ubuntu-latest` runs CLI only, `macos-latest` runs
-  API/web/macOS/iOS (Xcode + simulators ship preinstalled). API moved off
-  Linux after the first real run: `fledge-plugin-http` is a Swift package
-  that calls Darwin-only Foundation/CoreFoundation APIs and doesn't build
-  under swift-corelibs-foundation on Linux — a real upstream portability
-  bug, not something fixable from this repo's workflow file. Every "Run …
+  GitHub-hosted runners: `ubuntu-latest` runs CLI, `macos-latest` runs
+  API/web/macOS/iOS (Xcode + simulators ship preinstalled), and a third
+  `android` job runs on `macos-latest` too (matches its Apple Silicon
+  hardware for `arch: arm64-v8a`). `fledge` itself is installed via its
+  `install.sh` (a prebuilt release binary) rather than `cargo install` or
+  `brew` — the cargo path alone was a confirmed 10-minute job, compiling
+  ~355 dependencies from source every run. API moved off Linux after the
+  first real run: `fledge-plugin-http` is a Swift package that calls
+  Darwin-only Foundation/CoreFoundation APIs and doesn't build under
+  swift-corelibs-foundation on Linux — a real upstream portability bug,
+  not something fixable from this repo's workflow file. Every "Run …
   targets" step also carries a hard `timeout-minutes`, after a first macOS
   run hung indefinitely — likely a macOS Automation/Apple-Events consent
   dialog for AppleScript-driven Safari/Calculator control, with no one there
@@ -58,11 +71,16 @@ Artifacts (screenshots, recordings, raw responses, per-step JSON) land under
 ## Layout
 
 ```
-specs/       one agent.3md per target — the test spec, human-readable and machine-routable
-scripts/     small glue (AppleScript, shell) a tool= template shells out to,
-             used only to dodge shell-quoting hell inside a single-line template
-runner/      run.ts — loads each spec with @corvidlabs/agent3md, routes,
-             fills, executes, asserts, writes artifacts/report.json
+specs/           one agent.3md per target — the test spec, human-readable and machine-routable
+scripts/         small glue (AppleScript, shell) a tool= template shells out to,
+                 used only to dodge shell-quoting hell inside a single-line template
+runner/run.ts    loads each spec with @corvidlabs/agent3md, routes, fills,
+                 executes, asserts, writes artifacts/report.json
+runner/validate.ts  the fast, dependency-free check `fledge lanes run verify` runs —
+                    every spec parses, no cycles, no unfilled placeholders left dangling
+fledge.toml, AGENTS.md, .trust.toml, .augur.toml, .attest.json
+                 the CorvidLabs trust toolchain (`fledge trust adopt`) — Spec Sync is the
+                 one piece deliberately not adopted here; see AGENTS.md's "Current milestone"
 ```
 
 ## Using this in another repo
@@ -105,8 +123,14 @@ Rust.
 
 ## Status
 
-Proven locally: API, CLI, iOS (boot/screenshot/record/shutdown — `openurl`
-timed out in one sandboxed dev environment, not simulator-side). Web and
-macOS route/execute correctly but need a host with Screen Recording
-permission granted (any normal GitHub-hosted `macos-latest` runner) to
-capture the screenshot artifact — that's exactly what CI is for.
+All six targets have real (non-guidance) adapters. Most recent full CI run
+on GitHub-hosted runners: 11/12 steps passing — API, web (2/2), macOS
+(2/2), CLI (2/2) all clean; iOS 4/5, with only `simctl openurl` flaky
+(boot/screenshot/record/shutdown all pass regardless — it fails the same
+way on a real runner as it did in local sandboxed dev, so it reads as a
+genuine `simctl` quirk, not an environment fluke). Android just landed and
+is still on its first CI verification pass as of this write-up.
+
+The `workflow_call` reusable-workflow mechanism itself — not just the
+engine in isolation — has been proven live in `CorvidLabs/magpie-sandbox`,
+including the exact `with:` blocks both real dogfood PRs use.

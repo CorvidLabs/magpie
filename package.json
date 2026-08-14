@@ -2,9 +2,11 @@
   "name": "magpie",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "One agent.3md spec format driving real tests across web, API, iOS, macOS, and CLI targets — no mocking, real artifacts, run on GitHub-hosted runners.",
   "scripts": {
-    "test": "bun runner/run.ts"
+    "test": "bun runner/run.ts",
+    "validate": "bun runner/validate.ts"
   },
   "devDependencies": {
     "@corvidlabs/agent3md": "^1.0.0"

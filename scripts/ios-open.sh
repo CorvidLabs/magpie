@@ -1,16 +1,23 @@
 #!/bin/sh
 # args: $1=device udid  $2=url
-# `simctl openurl` timed out on the first attempt in two separate
-# environments (a sandboxed dev machine and a real GitHub macos-latest
-# runner) right after boot — reads as the simulator's virtual network
-# needing a few more seconds to settle post-`bootstatus`, not an
-# environment fluke. One retry after a short wait is the cheap fix; if it
-# still fails twice, that's a real result worth reporting, not swallowed.
+# `simctl openurl` has now failed outright even with one retry (on a real
+# GitHub runner, after a run where ios/open itself also ran unusually
+# slowly — 113s — suggesting general resource contention around the
+# simulator that session, not a one-off). Bumped to two retries with a
+# longer backoff. If all three attempts still fail, that's a real,
+# honestly-reported result — this is Apple's simulator networking timing
+# under CI load, not something magpie can fully control from here.
 set -e
 DEVICE="$1"
 URL="$2"
-if ! xcrun simctl openurl "$DEVICE" "$URL"; then
-	echo "first openurl attempt failed, waiting 5s and retrying..." >&2
-	sleep 5
-	xcrun simctl openurl "$DEVICE" "$URL"
-fi
+attempt=1
+while ! xcrun simctl openurl "$DEVICE" "$URL"; do
+	if [ "$attempt" -ge 3 ]; then
+		echo "openurl failed on all $attempt attempts" >&2
+		exit 1
+	fi
+	wait_s=$((attempt * 5))
+	echo "openurl attempt $attempt failed, waiting ${wait_s}s and retrying..." >&2
+	sleep "$wait_s"
+	attempt=$((attempt + 1))
+done

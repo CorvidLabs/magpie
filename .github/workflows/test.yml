@@ -40,6 +40,14 @@ on:
         type: string
         default: 'api,web,macos,ios'
 
+# CodeQL flagged all three jobs for this (actions/checkout +
+# actions/upload-artifact are the only actions any of them use — neither
+# needs more than read access to repo contents; no PR comments, no
+# packages, no pages, nothing else). Matches fledge's own ci.yml, which
+# has the identical `contents: read` at the same top level.
+permissions:
+  contents: read
+
 jobs:
   linux:
     name: CLI (ubuntu)

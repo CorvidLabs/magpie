@@ -1,0 +1,10 @@
+# *.3md is Markdown extended along a Z axis (frontmatter + prose +
+# @plane markers) — but GitHub's Linguist detects it as Roff, since a
+# dot immediately followed by a digit (".3md") collides with Unix man-
+# page section-number conventions (.1-.9, .3x, .3pm, ...), which is
+# exactly what Roff's own file extensions look like. Confirmed this
+# isn't a fluke: even CorvidLabs/agent-3md itself (the format's own
+# origin repo) has the identical misdetection, unfixed. Purely cosmetic
+# — doesn't affect parsing/execution — but the repo's own "Languages" bar
+# is one of the first things anyone sees, so worth being accurate.
+*.3md linguist-language=Markdown

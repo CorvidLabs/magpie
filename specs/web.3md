@@ -2,8 +2,8 @@
 3md: 1.0
 axis: skill
 agent: web-tester
-tools: osascript, screencapture
-persona: drives real Safari via AppleScript and captures a real screenshot, no headless browser
+tools: sh, screencapture
+persona: drives real Safari via System Events UI-scripting and captures a real screenshot, no headless browser
 ---
 Test agent for the Web target. Uses Safari itself (already installed, no
 Playwright/Chromium download needed) as the driver, automated through
@@ -16,11 +16,12 @@ apps.
 Open the page, read back its title as the cheapest possible assertion, then
 capture a screenshot artifact.
 
-@plane z=1 label="open" kind=skill triggers="web, page, url, browser, navigate, load" inputs="url:string" tool="osascript scripts/web-open.applescript {url}"
+@plane z=1 label="open" kind=skill triggers="web, page, url, browser, navigate, load" inputs="url:string" tool="sh scripts/web-open.sh {url}"
 # Skill: open
 
-Open {url} as a new Safari document and return its resolved page title.
-Assert the title is non-empty.
+Open {url} in Safari via System Events keystrokes (not Safari's own Apple
+Events dictionary — see scripts/web-open.sh for why) and return the
+resulting front window's name. Assert it is non-empty.
 
 @plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="path:string" tool="screencapture -x {path}" cost="fs"
 # Skill: screenshot

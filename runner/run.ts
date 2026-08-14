@@ -112,9 +112,11 @@ if (shouldRun("cli")) {
   let ok2 = false, note2 = "";
   try {
     const parsed = JSON.parse(e2.stdout);
-    // this repo has no .git yet, so "not a git repository" is the *expected* outcome
-    ok2 = parsed.data.exit_code === 128 && /not a git repository/i.test(parsed.data.clean_output);
-    note2 = ok2 ? "expected: not a git repository yet" : parsed.data.clean_output.trim();
+    // magpie is itself a real pushed git repo now, so a clean `git status`
+    // (exit 0) is the expected outcome — not "not a git repository" (that
+    // was only ever true in the throwaway pre-init local sandbox).
+    ok2 = parsed.status === "ok" && parsed.data.exit_code === 0;
+    note2 = parsed.data.clean_output.trim() || "(clean)";
   } catch { note2 = e2.stderr.trim().slice(0, 200); }
   record({ target: "cli", skill: status.name, z: status.z, routedVia: null, command: cmd2, exitCode: e2.exitCode, ok: ok2, note: note2, durationMs: e2.durationMs, artifacts: ["artifacts/cli/status.json"] });
 }

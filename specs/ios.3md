@@ -22,10 +22,12 @@ then shut it down again so no simulator is left running after the test.
 Boot the simulator identified by {device} (a UDID). simctl errors if it is
 already booted, which is itself a legitimate, reportable state.
 
-@plane z=2 label="open" kind=skill triggers="open, url, load, safari, mobile" inputs="device:string, url:string" tool="xcrun simctl openurl {device} {url}"
+@plane z=2 label="open" kind=skill triggers="open, url, load, safari, mobile" inputs="device:string, url:string" tool="sh scripts/ios-open.sh {device} {url}"
 # Skill: open
 
-Open {url} in the simulator's Safari. Requires [[z=1|boot]] to have completed.
+Open {url} in the simulator's Safari, with one retry after a short settle
+delay if the first attempt times out (see scripts/ios-open.sh). Requires
+[[z=1|boot]] to have completed.
 
 @plane z=3 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="device:string, path:string" tool="xcrun simctl io {device} screenshot {path}" cost="fs"
 # Skill: screenshot

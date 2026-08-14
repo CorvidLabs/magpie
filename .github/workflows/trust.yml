@@ -18,8 +18,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      # `fledge trust adopt` doesn't know magpie's lifecycle command
+      # (fledge lanes run verify -> bun run validate) needs Bun and
+      # node_modules first — confirmed by the first real run of this
+      # workflow failing with LIFECYCLE: failure. CorvidLabs/let's own
+      # trust.yml has the identical fix for the identical reason (same
+      # Bun/TS stack); this mirrors it rather than guessing.
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
       - uses: CorvidLabs/trust@v1
         id: trust
+
+      - name: Check managed agent rules
+        run: |
+          grep -q "CorvidLabs trust toolchain: BEGIN" AGENTS.md
+          grep -q "CorvidLabs trust toolchain: END" AGENTS.md
 
       - name: Render Atlas publication
         if: github.event_name == 'push' && steps.trust.outputs['atlas-enabled'] == 'true'

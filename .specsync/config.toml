@@ -1,14 +1,14 @@
 # spec-sync v4 configuration
 # Docs: https://github.com/CorvidLabs/spec-sync
 
-# Not "specs" — that directory already means something else here
-# (magpie's own agent3md test specs, specs/*.3md), colliding with
-# spec-sync's own convention. This is exactly the blocker recorded in
-# .trust.toml when spec-sync was first (deliberately) skipped; resolved
-# by pointing spec-sync's own specs_dir elsewhere rather than relocating
-# magpie's specs/ (which is load-bearing throughout runner/run.ts's own
-# --specs-dir default-value logic, this README, and every spec file).
-specs_dir = "module-specs"
+# Back to spec-sync's own natural default ("specs", not "module-specs").
+# The workaround this comment used to explain — magpie's own agent3md test
+# specs already claimed "specs/*.3md" — is gone: those moved to
+# .magpie/specs/ instead, specifically so a testbed meant to be dropped
+# into other real projects doesn't force them to rename whatever they
+# already keep in a directory this common. See runner/run.ts's own
+# comment on --specs-dir's default for the full reasoning.
+specs_dir = "specs"
 # magpie's real application source — the engine itself, not the specs it
 # executes.
 source_dirs = ["runner"]

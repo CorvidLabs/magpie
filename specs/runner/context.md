@@ -12,18 +12,21 @@ every actual capability (HTTP, PTY-wrapped CLI, AppleScript, `simctl`,
 `adb`) comes from shelling out to a real binary, never from a library this
 module imports.
 
-`specs_dir = "module-specs"` (not `specs`) in `.specsync/config.toml` is
-deliberate, not a typo: `specs/` already means magpie's own `agent.3md`
-test specs (`specs/*.3md`), which collides with spec-sync's own
-convention of the same directory name for module contracts like this one.
-Resolved by pointing spec-sync elsewhere rather than relocating `specs/`,
-which is load-bearing throughout `run.ts`'s own `--specs-dir` default-
-value logic (`isGeneric = specsDir !== "specs"`), the README, and every
-hand-written spec file.
+`specs_dir = "specs"` in `.specsync/config.toml` is spec-sync's own
+natural default — not a workaround. It used to be `module-specs`, because
+magpie's own `agent.3md` test specs lived at `specs/*.3md` and collided
+with spec-sync's convention of the same directory name for module
+contracts like this one. Resolved the other way now: magpie's own specs
+moved to `.magpie/specs/` instead (load-bearing throughout `run.ts`'s own
+`--specs-dir` default-value logic, now `isGeneric = specsDir !== ".magpie/specs"`),
+freeing the bare `specs/` name — deliberately, since it's a directory name
+plenty of other real projects already use for their own purposes, and a
+testbed meant to be dropped into someone else's repo shouldn't force them
+to rename what was already there first.
 
 ## Related Modules
 
-- `specs/*.3md` — the six target specs this engine executes by default.
+- `.magpie/specs/*.3md` — the six target specs this engine executes by default.
 - `scripts/*.sh` / `scripts/*.applescript` — glue a `tool=` template shells
   out to, kept outside this module because they're spec-owned, not
   engine-owned (a different caller repo brings its own).

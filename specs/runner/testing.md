@@ -14,7 +14,7 @@ regression in `run.ts` itself.
 
 ### Structural (fast, no live dependencies — `bun run validate`)
 
-- Every `specs/*.3md` parses and passes `validateAgent()`.
+- Every `.magpie/specs/*.3md` parses and passes `validateAgent()`.
 - A synthetic spec covering all three generic-mode edge cases (bare
   command, unfilled `{placeholder}`, guidance-only skill) behaves as
   documented — proven locally before `.steps.toml` shipped, and again

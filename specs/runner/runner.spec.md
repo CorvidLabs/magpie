@@ -20,7 +20,7 @@ and executes it. Two entry points: `run.ts` (execute — either magpie's own
 six hand-written target sections, or a generic `--specs-dir`-driven mode
 for dogfooding another repo) and `validate.ts` (the fast, dependency-free
 structural check `fledge lanes run verify` actually runs — no execution,
-just parse + `validateAgent()` over every `specs/*.3md`).
+just parse + `validateAgent()` over every `.magpie/specs/*.3md`).
 
 ## Public API
 
@@ -29,7 +29,7 @@ just parse + `validateAgent()` over every `specs/*.3md`).
 | Flag | Default | Effect |
 |------|---------|--------|
 | `--targets=<a,b,...>` | all six | Restricts magpie's own hardcoded target sections to a subset. Ignored entirely in generic mode (every skill in every spec file under `--specs-dir` runs regardless). |
-| `--specs-dir=<path>` | `specs` | Anything other than the literal string `specs` switches the engine from magpie's own six hand-written sections to generic mode. |
+| `--specs-dir=<path>` | `.magpie/specs` | Anything other than the literal string `.magpie/specs` switches the engine from magpie's own six hand-written sections to generic mode. |
 | `--out-dir=<path>` | `artifacts` | Where `report.json` and per-skill artifacts/logs are written. |
 
 ### `report.json` schema (`StepResult[]`)
@@ -87,7 +87,7 @@ just parse + `validateAgent()` over every `specs/*.3md`).
 ## Behavioral Examples
 
 ```
-Given specs/cli.3md declares a "version" skill with tool=
+Given .magpie/specs/cli.3md declares a "version" skill with tool=
   "fledge rune run --timeout=15 --json -- {binary} --version"
 When run.ts routes the request "check the git binary version" and fills
   {binary: "git"}

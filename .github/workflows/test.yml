@@ -17,7 +17,7 @@ on:
   # Makes this a reusable workflow: another repo adds a job like
   #   dogfood:
   #     uses: CorvidLabs/magpie/.github/workflows/test.yml@main
-  #     with: { specs-dir: .magpie-specs, macos-targets: macos, linux-targets: none }
+  #     with: { specs-dir: .magpie/specs, macos-targets: macos, linux-targets: none }
   # and points specs-dir at its OWN .3md specs (see README's "Using this in
   # another repo"). Defaults below match magpie's own self-test, so this
   # trigger changes nothing when the workflow runs on pushes/PRs here.
@@ -32,7 +32,7 @@ on:
     inputs:
       specs-dir:
         type: string
-        default: specs
+        default: .magpie/specs
       linux-targets:
         type: string
         default: cli
@@ -105,7 +105,7 @@ jobs:
 
       - name: Run CLI target
         timeout-minutes: 5
-        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || 'specs' }} --out-dir=artifacts --targets=${{ inputs.linux-targets || 'cli' }}
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} --out-dir=artifacts --targets=${{ inputs.linux-targets || 'cli' }}
 
       - name: Upload artifacts
         if: always()
@@ -165,7 +165,7 @@ jobs:
         timeout-minutes: 8
         env:
           MAGPIE_BROWSER: Safari
-        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || 'specs' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || '.magpie/specs' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
 
       - name: Upload artifacts
         if: always()
@@ -176,10 +176,11 @@ jobs:
 
   android:
     name: Android (emulator)
-    # Magpie's own specs/android.3md only — not part of the workflow_call
-    # generalization. A caller repo's checkout has no specs/android.3md
-    # (or wouldn't want this run at all), so this only runs when the
-    # workflow's own repo is magpie, never for MacNTop/fledge/a sandbox
+    # Magpie's own .magpie/specs/android.3md only — not part of the
+    # workflow_call generalization. A caller repo's checkout has no
+    # .magpie/specs/android.3md (or wouldn't want this run at all), so
+    # this only runs when the workflow's own repo is magpie, never for
+    # MacNTop/fledge/a sandbox
     # invoking it via workflow_call. github.repository reflects the
     # CALLING repo inside a reusable-workflow job, which is exactly the
     # distinction needed here — unlike inputs.*, this doesn't hit the

@@ -50,7 +50,7 @@ command for real.
   "Using this in another repo").
 - `runner/validate.ts` — the fast, dependency-free structural check
   `fledge lanes run verify` actually runs.
-- `specs/*.3md` — one spec per target, human-readable and
+- `.magpie/specs/*.3md` — one spec per target, human-readable and
   machine-routable at once.
 - `scripts/` — small glue (AppleScript, shell) a `tool=` template shells
   out to, used only to dodge shell-quoting hell inside a single-line
@@ -74,9 +74,12 @@ governed repo in the loop.
 
 All six targets have real (non-guidance) adapters — Android (`adb` via a
 live emulator) was the last one to move off guidance-only. Spec Sync
-*is* adopted here now (`module-specs/`, not `specs/` — see
-`module-specs/runner/context.md` for why), covering the engine's own
-source (`runner/*.ts`) with `fledge spec check` passing at 100% coverage.
+*is* adopted here now (`specs/`, spec-sync's own natural default —
+magpie's own test specs live at `.magpie/specs/` instead, deliberately
+namespaced so this testbed doesn't claim a directory name other real
+projects already use for their own purposes; see `specs/runner/context.md`
+for the full reasoning), covering the engine's own source (`runner/*.ts`)
+with `fledge spec check` passing at 100% coverage.
 `.steps.toml` is the newest piece: a much lower-friction way to author a
 generic-mode spec, after hand-writing raw `.3md` caused three separate
 accidental dependency-cycle mistakes this project's own history.

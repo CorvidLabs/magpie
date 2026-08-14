@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Orchestrator for the testbed POC.
 //
-// Loads each specs/<target>.3md with the real @corvidlabs/agent3md library,
+// Loads each .magpie/specs/<target>.3md with the real @corvidlabs/agent3md library,
 // routes a natural-language request to a skill (proving trigger matching
 // works), fills its typed inputs, renders the real shell command, and
 // actually executes it. No mocking: every non-stub step below runs a real
@@ -45,22 +45,29 @@ const shouldRun = (target: string) => !requestedTargets || requestedTargets.incl
 // `--specs-dir=<path>` and `--out-dir=<path>` point this engine at another
 // project's own .3md specs instead of magpie's own demo ones — this is the
 // whole mechanism by which "dogfood magpie on project X" works. Left at the
-// default ("specs"), magpie runs its own six hand-written, richly-asserted
-// target sections below, unchanged. Pointed elsewhere, it switches to a
-// generic engine: every .3md file directly under specs-dir, every skill
-// with a `tool` (in z order), executed and recorded on exit code alone —
-// no per-skill custom assertions, because a shared engine can't know what
-// "correct" means for someone else's project. Skills need to be bare /
-// parameterless (a dogfooding repo's spec authors know their own real
+// default (".magpie/specs"), magpie runs its own six hand-written, richly-
+// asserted target sections below, unchanged. Pointed elsewhere, it switches
+// to a generic engine: every .3md file directly under specs-dir, every
+// skill with a `tool` (in z order), executed and recorded on exit code
+// alone — no per-skill custom assertions, because a shared engine can't
+// know what "correct" means for someone else's project. Skills need to be
+// bare/parameterless (a dogfooding repo's spec authors know their own real
 // values — a binary path, an app name — and can bake them straight into
 // `tool=` rather than this engine guessing at fill values); a skill still
 // carrying an unfilled `{placeholder}` is skipped with a clear reason
 // rather than run broken.
+//
+// The default is namespaced (".magpie/specs", not bare "specs") on
+// purpose: "specs" is a common directory name plenty of other tooling
+// already wants (Spec Sync's own default among them — see
+// .specsync/config.toml, which reclaimed the bare name once this moved).
+// A testbed meant to be dropped into other people's real projects
+// shouldn't force them to rename something that was already there first.
 const specsDirArg = process.argv.find((a) => a.startsWith("--specs-dir="));
 const outDirArg = process.argv.find((a) => a.startsWith("--out-dir="));
-const specsDir = specsDirArg ? specsDirArg.slice("--specs-dir=".length) : "specs";
+const specsDir = specsDirArg ? specsDirArg.slice("--specs-dir=".length) : ".magpie/specs";
 const outDir = outDirArg ? outDirArg.slice("--out-dir=".length) : "artifacts";
-const isGeneric = specsDir !== "specs";
+const isGeneric = specsDir !== ".magpie/specs";
 await mkdir(outDir, { recursive: true }); // record() writes report.json here from the very first step
 
 async function runGeneric(): Promise<void> {
@@ -222,9 +229,9 @@ for (const dir of ["api", "cli", "web", "macos", "ios", "android"]) {
 }
 
 // ============================== API ==============================
-log("\n=== API target (specs/api.3md) ===");
+log("\n=== API target (.magpie/specs/api.3md) ===");
 if (shouldRun("api")) {
-  const agent = await loadAgent("specs/api.3md");
+  const agent = await loadAgent(".magpie/specs/api.3md");
   const request = "call the api and check the response";
   const [match] = agent.route(request);
   log(`  routed "${request}" -> ${match.skill.name} (hits: ${match.hits.join(", ")})`);
@@ -243,9 +250,9 @@ if (shouldRun("api")) {
 }
 
 // ============================== CLI ==============================
-log("\n=== CLI target (specs/cli.3md) ===");
+log("\n=== CLI target (.magpie/specs/cli.3md) ===");
 if (shouldRun("cli")) {
-  const agent = await loadAgent("specs/cli.3md");
+  const agent = await loadAgent(".magpie/specs/cli.3md");
 
   const req1 = "check the git binary version";
   const [m1] = agent.route(req1);
@@ -279,9 +286,9 @@ if (shouldRun("cli")) {
 }
 
 // ============================== WEB ==============================
-log("\n=== Web target (specs/web.3md) ===");
+log("\n=== Web target (.magpie/specs/web.3md) ===");
 if (shouldRun("web")) {
-  const agent = await loadAgent("specs/web.3md");
+  const agent = await loadAgent(".magpie/specs/web.3md");
   const chain = agent.resolve("screenshot").map((s) => s.name);
   log(`  dependency chain for "screenshot": ${chain.join(" -> ")}`);
 
@@ -302,9 +309,9 @@ if (shouldRun("web")) {
 }
 
 // ============================== macOS ==============================
-log("\n=== macOS target (specs/macos.3md) ===");
+log("\n=== macOS target (.magpie/specs/macos.3md) ===");
 if (shouldRun("macos")) {
-  const agent = await loadAgent("specs/macos.3md");
+  const agent = await loadAgent(".magpie/specs/macos.3md");
   const req = "launch the app and read its accessibility ui elements";
   const [m1] = agent.route(req);
   log(`  routed "${req}" -> ${m1.skill.name} (hits: ${m1.hits.join(", ")})`);
@@ -322,9 +329,9 @@ if (shouldRun("macos")) {
 }
 
 // ============================== iOS Simulator ==============================
-log("\n=== iOS Simulator target (specs/ios.3md) ===");
+log("\n=== iOS Simulator target (.magpie/specs/ios.3md) ===");
 if (shouldRun("ios")) {
-  const agent = await loadAgent("specs/ios.3md");
+  const agent = await loadAgent(".magpie/specs/ios.3md");
 
   const listRaw = await exec("xcrun simctl list devices available -j");
   const list = JSON.parse(listRaw.stdout);
@@ -372,9 +379,9 @@ if (shouldRun("ios")) {
 // First real (non-guidance) pass — proven via reactivecircus/android-
 // emulator-runner, which owns the emulator's boot/shutdown lifecycle for
 // the duration of one CI step. Nothing to boot/teardown here ourselves.
-log("\n=== Android target (specs/android.3md) ===");
+log("\n=== Android target (.magpie/specs/android.3md) ===");
 if (shouldRun("android")) {
-  const agent = await loadAgent("specs/android.3md");
+  const agent = await loadAgent(".magpie/specs/android.3md");
 
   const req = "list connected android devices";
   const [m1] = agent.route(req);

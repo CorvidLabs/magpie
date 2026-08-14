@@ -2,4 +2,4 @@
 name = "nest"
 
 [specs]
-runner = "module-specs/runner/runner.spec.md"
+runner = "specs/runner/runner.spec.md"

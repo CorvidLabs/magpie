@@ -21,7 +21,7 @@ machine's TCC settings.
 ## Why this shape
 
 - **The spec format is [`agent.3md`](https://github.com/CorvidLabs/agent-3md).**
-  Each `specs/<target>.3md` is a small agent: an identity plane plus a few
+  Each `.magpie/specs/<target>.3md` is a small agent: an identity plane plus a few
   skill planes. A skill declares `triggers` (natural-language phrases that
   route to it), typed `inputs`, and an optional `tool=` command template.
   `route("open this web page") → fill inputs → run the rendered command` is
@@ -88,7 +88,7 @@ Artifacts (screenshots, recordings, raw responses, per-step JSON) land under
 ## Layout
 
 ```
-specs/           one agent.3md per target — the test spec, human-readable and machine-routable
+.magpie/specs/   one agent.3md per target — the test spec, human-readable and machine-routable
 scripts/         small glue (AppleScript, shell) a tool= template shells out to,
                  used only to dodge shell-quoting hell inside a single-line template
 runner/run.ts    loads each spec with @corvidlabs/agent3md, routes, fills,
@@ -97,15 +97,17 @@ runner/validate.ts  the fast, dependency-free check `fledge lanes run verify` ru
                     every spec parses, no cycles, no unfilled placeholders left dangling
 fledge.toml, AGENTS.md, .trust.toml, .augur.toml, .attest.json
                  the CorvidLabs trust toolchain (`fledge trust adopt`), contract gate included
-module-specs/    real Spec Sync module contracts for this engine's own source (runner/*.ts) —
-                 not specs/, which already means something else here; see its own context.md
+specs/           real Spec Sync module contracts for this engine's own source (runner/*.ts) —
+                 spec-sync's own natural default directory name, not .magpie/specs/ (this
+                 testbed's own test specs, deliberately namespaced so it doesn't claim a
+                 directory name other real projects already use for their own purposes)
 ```
 
 ## Using this in another repo
 
 `runner/run.ts` has two modes:
 
-- **Default** (`specs-dir` unset, or `specs`) — magpie's own six hand-written,
+- **Default** (`specs-dir` unset, or `.magpie/specs`) — magpie's own six hand-written,
   richly-asserted target sections, unchanged. This is what runs on pushes
   and PRs to this repo.
 - **Generic** (`--specs-dir=<path>` pointing anywhere else) — every `.3md`
@@ -157,9 +159,10 @@ jobs:
   dogfood:
     uses: CorvidLabs/magpie/.github/workflows/test.yml@main
     with:
-      specs-dir: .magpie-specs   # avoid colliding with an existing specs/ (e.g. Spec Sync's)
-      macos-targets: macos       # the literal string "none" skips a job entirely
-      linux-targets: none        # (not empty string — see test.yml's own comment on why)
+      specs-dir: .magpie/specs   # namespaced so it never collides with an existing specs/
+      macos-targets: macos       # (e.g. Spec Sync's) the caller repo already has for itself
+      linux-targets: none        # the literal string "none" skips a job (not empty string —
+                                  # see test.yml's own comment on why)
 ```
 
 The reusable workflow checks out `CorvidLabs/magpie` into `.magpie-engine/`
@@ -175,7 +178,7 @@ All six targets have real (non-guidance) adapters and pass in CI. `ok`
 in `report.json` reflects reality honestly — `run.ts` exits non-zero if
 any step fails, so a green job means every step actually passed. Two
 steps are marked `critical: false` (still reported as FAIL when they
-happen, just not job-fatal), both in `specs/ios.3md`, both real GitHub
+happen, just not job-fatal), both in `.magpie/specs/ios.3md`, both real GitHub
 macOS-runner limitations hit repeatedly across this project's own CI runs
 rather than magpie bugs:
 

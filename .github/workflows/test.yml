@@ -60,9 +60,17 @@ jobs:
       # around. cli only needs fledge + rune (both plain Rust, build fine
       # here), so the api target runs on the macos job instead, where that
       # plugin is on native Darwin Foundation.
+      #
+      # fledge itself has no action.yml (checked; spec-sync does, fledge
+      # doesn't), but it does ship install.sh — a prebuilt release-binary
+      # download, not a from-source build. `cargo install fledge` compiled
+      # ~355 dependencies (wasmtime included) and was the actual cause of
+      # this job's 10-minute runs. rune has neither an action.yml nor an
+      # install.sh (it's a Ruby gem); `fledge plugins install` is still the
+      # only documented path for it.
       - name: Install fledge + plugins
         run: |
-          cargo install fledge
+          curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
           fledge plugins install --non-interactive --yes CorvidLabs/rune
 
       - name: Install magpie engine deps
@@ -97,9 +105,15 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
+      # Same install.sh as the linux job (prebuilt binary, not a from-source
+      # build) rather than brew — avoids brew's own overhead and the
+      # unrelated "untrusted tap" warning noise a prior run showed.
+      # fledge-plugin-http (Swift) has neither an action.yml nor an
+      # install.sh; `fledge plugins install` is still the only documented
+      # path for it.
       - name: Install fledge + plugins
         run: |
-          brew install corvidlabs/tap/fledge
+          curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
           fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
 
       - name: Install magpie engine deps

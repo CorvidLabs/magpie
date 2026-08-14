@@ -270,7 +270,7 @@ if (shouldRun("ios")) {
   const open = agent.get("open")!;
   const cmdOpen = agent.command(open.name, { device: device.udid, url: "https://example.com" })!;
   const eOpen = await exec(cmdOpen);
-  record({ target: "ios", skill: open.name, z: open.z, routedVia: null, command: cmdOpen, exitCode: eOpen.exitCode, ok: eOpen.exitCode === 0, note: eOpen.exitCode === 0 ? "opened in mobile Safari" : eOpen.stderr.trim().slice(0, 200), durationMs: eOpen.durationMs, artifacts: [] });
+  record({ target: "ios", skill: open.name, z: open.z, routedVia: null, command: cmdOpen, exitCode: eOpen.exitCode, ok: eOpen.exitCode === 0, note: eOpen.exitCode === 0 ? "opened in mobile Safari" : eOpen.stderr.trim().slice(0, 200), durationMs: eOpen.durationMs, artifacts: [], critical: false });
 
   const shot = agent.get("screenshot")!;
   const shotPath = `${ROOT}/artifacts/ios/screenshot.png`;

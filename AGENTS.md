@@ -12,10 +12,18 @@ command for real.
    real binary against real state. If a target can't run somewhere
    (no adb here, no macOS TCC grant there), say so and skip — never fake
    a result.
-2. **CI is the verification ground, not this machine.** Several targets
-   (web/macOS Automation permissions, iOS Simulator networking) only
-   behave correctly on a real GitHub-hosted runner. Don't trust a local
-   claim of "this works" for those — trust the workflow run.
+2. **CI is the verification ground, not this machine — and don't run
+   GUI-app steps here at all.** Several targets (web/macOS Automation
+   permissions, iOS Simulator networking) only behave correctly on a real
+   GitHub-hosted runner, so don't trust a local claim of "this works" for
+   those. But the sharper rule, learned the expensive way: `open -a`,
+   `osascript` driving a real app, and `pkill`/`killall` against one
+   don't run in an isolated sandbox on a dev machine — they act on
+   whatever's actually running there. A session that ran these "just to
+   test locally" opened, navigated, and then force-killed the operator's
+   real Safari. CLI/HTTP/file-based steps are fine to run locally; a step
+   that opens, drives, or kills a GUI application is not, full stop —
+   push it and let CI verify instead.
 3. **Every `tool=` must render cleanly.** No unfilled `{placeholder}` in
    a rendered command, no dependency cycles in `[[z=N|...]]` links —
    `bun run validate` (or `fledge lanes run verify`) catches both before

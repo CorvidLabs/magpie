@@ -7,7 +7,16 @@
 A generic cross-platform testbed: one `.3md` spec file per target (web, API,
 iOS, macOS, CLI, Android), each driving *real* commands against *real*
 state. No mocking, no headless-browser download, no simulated anything.
-Runs on GitHub-hosted runners, not anyone's laptop.
+
+`bun runner/run.ts` runs anywhere Bun and a target's own real tools exist
+— a real device included, not only CI. `.github/workflows/test.yml` runs
+it on GitHub-hosted runners, but that's a choice about *where* to get
+the permission grants some targets need (Screen Recording, KVM,
+Automation/TCC), not a statement that local or on-device execution isn't
+real. Screenshot/video capture specifically needs those grants wherever
+it runs, CI or not — see "Why CI, specifically" below for exactly which
+ones and why CI is where this project got them without hand-configuring a
+machine's TCC settings.
 
 ## Why this shape
 
@@ -36,7 +45,7 @@ Runs on GitHub-hosted runners, not anyone's laptop.
     boots for the one CI step it runs in (devices → screenshot → record) —
     unlike `simctl`, that action owns the whole boot/shutdown lifecycle
     itself, so there's no separate boot/teardown skill the way iOS has one
-- **CI, not a laptop.** `.github/workflows/test.yml` splits targets across
+- **Why CI, specifically.** `.github/workflows/test.yml` splits targets across
   GitHub-hosted runners: `ubuntu-latest` runs CLI and, in a separate job,
   Android (KVM-accelerated emulator); `macos-latest` runs API/web/macOS/iOS
   (Xcode + simulators ship preinstalled). Android's job specifically needs

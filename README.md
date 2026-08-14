@@ -31,11 +31,14 @@ machine's TCC settings.
   - **API** → `fledge http-get` (CorvidLabs/fledge-plugin-http)
   - **CLI** → `fledge rune run` (CorvidLabs/rune) — PTY-wrapped, so output
     matches a real terminal even for tools that behave differently headless
-  - **Web** → Google Chrome, driven through `System Events` keystrokes
-    (`scripts/web-open.sh`) — not Chrome's own AppleScript dictionary,
-    which needs a macOS Automation consent grant a fresh CI runner doesn't
-    have. Chrome rather than Safari deliberately: this drives a real GUI
-    browser window, and Chrome isn't anyone's daily-driver browser here
+  - **Web** → a configurable real browser (`$MAGPIE_BROWSER`), driven
+    through `System Events` keystrokes (`scripts/web-open.sh`) — not the
+    browser's own AppleScript dictionary, which needs a macOS Automation
+    consent grant a fresh CI runner doesn't have. Safari in CI (pinned
+    explicitly in `test.yml` — confirmed working there; Chrome hung the
+    full 8-minute step timeout when tried), Google Chrome everywhere else
+    by default, since this drives a real GUI browser window that gets
+    force-killed and Chrome isn't anyone's daily-driver browser here
   - **macOS** → a launched app's Accessibility tree, read via
     `System Events` (`scripts/macos-launch.sh`) — the same bridge a native
     `AXUIElement` adapter would call

@@ -155,8 +155,16 @@ jobs:
       # permission issue). A hard timeout turns a silent CI-minutes leak into
       # a clear failure, and "Upload artifacts" below still runs on timeout
       # so partial per-step JSON/screenshots survive for diagnosis.
+      #
+      # MAGPIE_BROWSER=Safari pins the web target's browser explicitly here.
+      # Confirmed via a real run: Chrome (this script's default everywhere
+      # else, chosen to avoid touching anyone's daily-driver browser) hangs
+      # the full 8-minute timeout on this runner image — Safari is the
+      # confirmed-working choice in CI specifically. See scripts/web-open.sh.
       - name: Run API + web + macOS + iOS targets
         timeout-minutes: 8
+        env:
+          MAGPIE_BROWSER: Safari
         run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || 'specs' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
 
       - name: Upload artifacts

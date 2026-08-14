@@ -25,10 +25,14 @@ command for real.
    documented no-op in generic mode and so didn't scope anything. CLI/
    HTTP/file-based steps are fine to run locally; a step that opens,
    drives, or kills a GUI application is not, full stop — push it and let
-   CI verify instead. The web driver now targets Google Chrome rather
-   than Safari specifically because Chrome isn't the operator's
-   daily-driver browser, but that's a blast-radius reduction, not
-   permission to run these steps locally — the rule above still applies.
+   CI verify instead. The web driver's target browser is now configurable
+   ($MAGPIE_BROWSER, see scripts/web-open.sh) — Safari pinned explicitly
+   in CI (confirmed working there; Chrome hung a full 8-minute CI timeout
+   when tried), Google Chrome as the default everywhere else, since
+   Chrome isn't the operator's daily-driver browser. That's a
+   blast-radius reduction for the default case, not permission to run
+   these steps locally — the rule above still applies regardless of which
+   app the current default targets.
 3. **Every `tool=` must render cleanly.** No unfilled `{placeholder}` in
    a rendered command, no dependency cycles in `[[z=N|...]]` links —
    `bun run validate` (or `fledge lanes run verify`) catches both before

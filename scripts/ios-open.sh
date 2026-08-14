@@ -1,12 +1,9 @@
 #!/bin/sh
 # args: $1=device udid  $2=url
-# `simctl openurl` has now failed outright even with one retry (on a real
-# GitHub runner, after a run where ios/open itself also ran unusually
-# slowly — 113s — suggesting general resource contention around the
-# simulator that session, not a one-off). Bumped to two retries with a
-# longer backoff. If all three attempts still fail, that's a real,
-# honestly-reported result — this is Apple's simulator networking timing
-# under CI load, not something magpie can fully control from here.
+# `simctl openurl` is a real, structural networking flake on GitHub's
+# macOS runners (see README's Status section) — retries with backoff,
+# but a failure here after all attempts is a real, honestly-reported
+# result, not a bug to keep chasing.
 set -e
 DEVICE="$1"
 URL="$2"

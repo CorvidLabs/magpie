@@ -34,6 +34,55 @@ const targetArg = process.argv.find((a) => a.startsWith("--targets="));
 const requestedTargets = targetArg ? targetArg.slice("--targets=".length).split(",") : null;
 const shouldRun = (target: string) => !requestedTargets || requestedTargets.includes(target);
 
+// `--specs-dir=<path>` and `--out-dir=<path>` point this engine at another
+// project's own .3md specs instead of magpie's own demo ones — this is the
+// whole mechanism by which "dogfood magpie on project X" works. Left at the
+// default ("specs"), magpie runs its own six hand-written, richly-asserted
+// target sections below, unchanged. Pointed elsewhere, it switches to a
+// generic engine: every .3md file directly under specs-dir, every skill
+// with a `tool` (in z order), executed and recorded on exit code alone —
+// no per-skill custom assertions, because a shared engine can't know what
+// "correct" means for someone else's project. Skills need to be bare /
+// parameterless (a dogfooding repo's spec authors know their own real
+// values — a binary path, an app name — and can bake them straight into
+// `tool=` rather than this engine guessing at fill values); a skill still
+// carrying an unfilled `{placeholder}` is skipped with a clear reason
+// rather than run broken.
+const specsDirArg = process.argv.find((a) => a.startsWith("--specs-dir="));
+const outDirArg = process.argv.find((a) => a.startsWith("--out-dir="));
+const specsDir = specsDirArg ? specsDirArg.slice("--specs-dir=".length) : "specs";
+const outDir = outDirArg ? outDirArg.slice("--out-dir=".length) : "artifacts";
+const isGeneric = specsDir !== "specs";
+
+async function runGeneric(): Promise<void> {
+  const glob = new Bun.Glob("*.3md");
+  const files = Array.from(glob.scanSync({ cwd: specsDir })).sort();
+  if (files.length === 0) log(`  no .3md files found under ${specsDir}`);
+  for (const file of files) {
+    const specPath = `${specsDir}/${file}`;
+    const dir = file.replace(/\.3md$/, "");
+    log(`\n=== ${specPath} ===`);
+    const agent = await loadAgent(specPath);
+    await mkdir(`${outDir}/${dir}`, { recursive: true });
+    const skills = [...agent.manifest().skills].sort((a, b) => a.z - b.z);
+    for (const s of skills) {
+      if (!s.tool) {
+        record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: null, exitCode: null, ok: true, note: "guidance-only, skipped (no tool=)", durationMs: 0, artifacts: [] });
+        continue;
+      }
+      const cmd = agent.command(s.name)!;
+      if (/\{[a-zA-Z_]+\}/.test(cmd)) {
+        record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: null, ok: false, note: "skipped: unfilled {placeholder} — generic mode only runs bare tool= commands", durationMs: 0, artifacts: [] });
+        continue;
+      }
+      const e = await exec(cmd);
+      const logPath = `${outDir}/${dir}/${s.name}.log`;
+      await Bun.write(logPath, `$ ${cmd}\n\n--- stdout ---\n${e.stdout}\n--- stderr ---\n${e.stderr}\n`);
+      record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: e.exitCode, ok: e.exitCode === 0, note: (e.stdout.trim() || e.stderr.trim()).slice(0, 200), durationMs: e.durationMs, artifacts: [logPath] });
+    }
+  }
+}
+
 async function loadAgent(specPath: string): Promise<Agent> {
   const src = await Bun.file(specPath).text();
   const report = validateAgent(src);
@@ -59,6 +108,11 @@ function record(r: StepResult) {
   log(`  [${badge}] ${r.target}/${r.skill} — ${r.note} (${r.durationMs}ms)`);
   if (r.command) log(`         $ ${r.command}`);
 }
+
+if (isGeneric) {
+  log(`\nrunning generic mode against ${specsDir} (magpie's own six hand-written target sections are skipped)`);
+  await runGeneric();
+} else {
 
 for (const dir of ["api", "cli", "web", "macos", "ios", "android"]) {
   await mkdir(`artifacts/${dir}`, { recursive: true });
@@ -220,8 +274,11 @@ if (shouldRun("android")) {
   record({ target: "android", skill: m1.skill.name, z: m1.skill.z, routedVia: req, command: cmd, exitCode: null, ok: cmd === null, note: "guidance-only: no adb in this sandbox — matches the spec's tool-less path exactly", durationMs: 0, artifacts: [] });
 }
 
+} // end of magpie's own hardcoded target sections (isGeneric === false)
+
 // ============================== Report ==============================
-await Bun.write("artifacts/report.json", JSON.stringify(results, null, 2));
+await mkdir(outDir, { recursive: true });
+await Bun.write(`${outDir}/report.json`, JSON.stringify(results, null, 2));
 
 log("\n=== Summary ===");
 const byTarget = new Map<string, StepResult[]>();
@@ -233,4 +290,4 @@ for (const [target, steps] of byTarget) {
   const pass = steps.filter((s) => s.ok).length;
   log(`  ${target}: ${pass}/${steps.length} ${pass === steps.length ? "OK" : "CHECK"}`);
 }
-log(`\nfull report: artifacts/report.json`);
+log(`\nfull report: ${outDir}/report.json`);

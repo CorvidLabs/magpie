@@ -5,14 +5,45 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # Makes this a reusable workflow: another repo adds a job like
+  #   dogfood:
+  #     uses: CorvidLabs/magpie/.github/workflows/test.yml@main
+  #     with: { specs-dir: .magpie-specs, macos-targets: macos, linux-targets: '' }
+  # and points specs-dir at its OWN .3md specs (see README's "Using this in
+  # another repo"). Defaults below match magpie's own self-test, so this
+  # trigger changes nothing when the workflow runs on pushes/PRs here.
+  workflow_call:
+    inputs:
+      specs-dir:
+        type: string
+        default: specs
+      linux-targets:
+        type: string
+        default: cli
+      macos-targets:
+        type: string
+        default: 'api,web,macos,ios'
 
 jobs:
   linux:
     name: CLI (ubuntu)
+    if: ${{ inputs.linux-targets != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Always fetched, even when this repo IS magpie (a few redundant
+      # seconds for magpie's own runs beats a conditional-checkout-path
+      # expression that can't be exercised until a caller repo actually
+      # invokes this workflow.
+      - name: Checkout magpie engine
+        uses: actions/checkout@v4
+        with:
+          repository: CorvidLabs/magpie
+          path: .magpie-engine
+
       - uses: oven-sh/setup-bun@v2
 
       # fledge-plugin-http is a Swift package that calls Darwin-only
@@ -27,12 +58,13 @@ jobs:
           cargo install fledge
           fledge plugins install --non-interactive --yes CorvidLabs/rune
 
-      - name: Install deps
+      - name: Install magpie engine deps
+        working-directory: .magpie-engine
         run: bun install
 
       - name: Run CLI target
         timeout-minutes: 5
-        run: bun runner/run.ts --targets=cli
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || 'specs' }} --out-dir=artifacts --targets=${{ inputs.linux-targets || 'cli' }}
 
       - name: Upload artifacts
         if: always()
@@ -43,10 +75,19 @@ jobs:
 
   macos:
     name: API + Web + macOS + iOS (macos)
+    if: ${{ inputs.macos-targets != '' }}
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout magpie engine
+        uses: actions/checkout@v4
+        with:
+          repository: CorvidLabs/magpie
+          path: .magpie-engine
+
       - uses: oven-sh/setup-bun@v2
 
       - name: Install fledge + plugins
@@ -54,7 +95,8 @@ jobs:
           brew install corvidlabs/tap/fledge
           fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
 
-      - name: Install deps
+      - name: Install magpie engine deps
+        working-directory: .magpie-engine
         run: bun install
 
       # Bounded on purpose: the first run of this job hung indefinitely here
@@ -66,7 +108,7 @@ jobs:
       # so partial per-step JSON/screenshots survive for diagnosis.
       - name: Run API + web + macOS + iOS targets
         timeout-minutes: 8
-        run: bun runner/run.ts --targets=api,web,macos,ios
+        run: bun .magpie-engine/runner/run.ts --specs-dir=${{ inputs.specs-dir || 'specs' }} --out-dir=artifacts --targets=${{ inputs.macos-targets || 'api,web,macos,ios' }}
 
       - name: Upload artifacts
         if: always()

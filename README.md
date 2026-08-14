@@ -65,6 +65,44 @@ runner/      run.ts — loads each spec with @corvidlabs/agent3md, routes,
              fills, executes, asserts, writes artifacts/report.json
 ```
 
+## Using this in another repo
+
+`runner/run.ts` has two modes:
+
+- **Default** (`specs-dir` unset, or `specs`) — magpie's own six hand-written,
+  richly-asserted target sections, unchanged. This is what runs on pushes
+  and PRs to this repo.
+- **Generic** (`--specs-dir=<path>` pointing anywhere else) — every `.3md`
+  file directly under that directory, every skill with a `tool=` in `z`
+  order, executed and recorded on exit code alone. No per-skill custom
+  assertions — a shared engine can't know what "correct" means for someone
+  else's project, only whether their command succeeded. Skills need to be
+  bare/parameterless: a dogfooding repo's spec authors know their own real
+  values (a binary path, an app name) and bake them straight into `tool=`
+  rather than this engine guessing fill values; a skill left with an
+  unfilled `{placeholder}` is skipped with a clear reason instead of run
+  broken.
+
+`.github/workflows/test.yml` is a reusable workflow (`on: workflow_call`).
+Another repo adds:
+
+```yaml
+jobs:
+  dogfood:
+    uses: CorvidLabs/magpie/.github/workflows/test.yml@main
+    with:
+      specs-dir: .magpie-specs   # avoid colliding with an existing specs/ (e.g. Spec Sync's)
+      macos-targets: macos       # empty string skips a job entirely
+      linux-targets: ''
+```
+
+The reusable workflow checks out `CorvidLabs/magpie` into `.magpie-engine/`
+alongside the caller's own checkout and runs `.magpie-engine/runner/run.ts`
+against the caller's `specs-dir`. A skill needing a build step first (compile
+before launching) does that inside its own `tool=` script, living in the
+caller's repo — the engine stays generic and doesn't need to know Swift from
+Rust.
+
 ## Status
 
 Proven locally: API, CLI, iOS (boot/screenshot/record/shutdown — `openurl`

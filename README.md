@@ -133,15 +133,16 @@ fully-validated `agent.3md` in memory before it runs:
 agent = "quick-steps"
 persona = "optional, one line"
 
-[[steps]]
-name = "hello"
-run = "echo hello"
-
-[[steps]]
-name = "broken-on-purpose"
-run = "false"
-expect_fail = true   # reported as FAIL, but doesn't fail the whole job — see magpie-sandbox
+steps = [
+  { name = "hello", run = "echo hello" },
+  { name = "broken-on-purpose", run = "false", expect_fail = true },  # reported as FAIL, but doesn't fail the whole job — see magpie-sandbox
+]
 ```
+
+(TOML's `[[steps]]` array-of-tables syntax works identically — both parse to
+the same array, and the compiler doesn't care which was used — but the
+inline form above reads as one line per step instead of a three-line block
+repeated per step, which matters once a fixture has more than two or three.)
 
 A skill needing `{placeholder}`-style parameterization, routing by
 natural language, or `[[z=N|...]]` dependencies still needs real `.3md` —

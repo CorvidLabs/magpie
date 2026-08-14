@@ -15,18 +15,21 @@ boot/shutdown skill here, because the emulator only exists inside that
 one step, not across the whole job.
 
 @plane z=0 label="android-tester" kind=identity
+
 # android-tester
 
 Assume a booted emulator already exists — the caller's job is responsible
 for that. Just prove `adb` can see it and pull real evidence back.
 
 @plane z=1 label="devices" kind=skill triggers="devices, adb, list, connected" tool="adb devices"
+
 # Skill: devices
 
 Lists connected devices/emulators. Proves `adb` can see a live emulator
 before trying anything else with it.
 
 @plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" tool="sh scripts/android-screenshot.sh artifacts/android/screenshot.png"
+
 # Skill: screenshot
 
 `adb exec-out screencap` writes binary PNG data — needs a real file
@@ -34,6 +37,7 @@ redirect, not this engine's own text-based stdout capture, hence the
 wrapper script. Requires [[z=1|devices]].
 
 @plane z=3 label="record" kind=skill triggers="video, record, recording, screen capture" tool="sh scripts/android-record.sh artifacts/android/recording.mp4 3"
+
 # Skill: record
 
 Records on-device via `adb shell screenrecord`, then pulls the file back

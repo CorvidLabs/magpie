@@ -11,18 +11,21 @@ call directly — this proves the read side of that adapter without writing any
 Swift.
 
 @plane z=0 label="macos-tester" kind=identity
+
 # macos-tester
 
 Launch the app, wait for it to settle, then read its window's UI element tree
 as the perceived state.
 
 @plane z=1 label="launch" kind=skill triggers="macos, app, launch, accessibility, ui elements" inputs="app:string" tool="sh scripts/macos-launch.sh {app}"
+
 # Skill: launch
 
 Launch {app} and dump the UI elements of its front window via System Events.
 Assert the element list is non-empty.
 
 @plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="path:string" tool="screencapture -x {path}" cost="fs"
+
 # Skill: screenshot
 
 Full-screen capture to {path}, taken right after [[z=1|launch]].

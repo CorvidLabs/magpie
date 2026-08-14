@@ -4,7 +4,18 @@
 # page section-number conventions (.1-.9, .3x, .3pm, ...), which is
 # exactly what Roff's own file extensions look like. Confirmed this
 # isn't a fluke: even CorvidLabs/agent-3md itself (the format's own
-# origin repo) has the identical misdetection, unfixed. Purely cosmetic
-# — doesn't affect parsing/execution — but the repo's own "Languages" bar
-# is one of the first things anyone sees, so worth being accurate.
-*.3md linguist-language=Markdown
+# origin repo) has the identical misdetection, unfixed.
+#
+# Tried `linguist-language=Markdown` first — fixed the language-stats
+# bar, but real evidence (a human looking at the actual rendered page)
+# showed it also makes GitHub's file view default to a "Preview" tab
+# that renders the body as one collapsed paragraph: `.3md` isn't a
+# genuinely markdown-recognized extension, so whatever render path a
+# language override routes it through isn't the same one real `.md`
+# files get — headings and paragraph breaks don't survive. That broke
+# actual human readability, which matters far more than the stats bar.
+# `linguist-documentation` instead: removes `.3md` from the language
+# stats (fixing the original cosmetic complaint) without claiming a
+# language, which should leave the file view on plain Code (each line
+# preserved as written) rather than a broken Preview.
+*.3md linguist-documentation

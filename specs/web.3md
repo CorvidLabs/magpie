@@ -16,12 +16,14 @@ drives a real GUI browser window that gets force-killed, so the target
 matters.
 
 @plane z=0 label="web-tester" kind=identity
+
 # web-tester
 
 Open the page, read back its title as the cheapest possible assertion, then
 capture a screenshot artifact.
 
 @plane z=1 label="open" kind=skill triggers="web, page, url, browser, navigate, load" inputs="url:string" tool="sh scripts/web-open.sh {url}"
+
 # Skill: open
 
 Open {url} in $MAGPIE_BROWSER via System Events keystrokes (not the
@@ -29,6 +31,7 @@ browser's own Apple Events dictionary — see scripts/web-open.sh for why)
 and return the resulting front window's name. Assert it is non-empty.
 
 @plane z=2 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="path:string" tool="screencapture -x {path}" cost="fs"
+
 # Skill: screenshot
 
 Full-screen capture to {path}, no shutter sound (`-x`). Run after [[z=1|open]]

@@ -71,15 +71,24 @@ jobs:
       # plugin is on native Darwin Foundation.
       #
       # fledge itself has no action.yml (checked; spec-sync does, fledge
-      # doesn't), but it does ship install.sh — a prebuilt release-binary
-      # download, not a from-source build. `cargo install fledge` compiled
-      # ~355 dependencies (wasmtime included) and was the actual cause of
-      # this job's 10-minute runs. rune has neither an action.yml nor an
-      # install.sh (it's a Ruby gem); `fledge plugins install` is still the
-      # only documented path for it.
+      # doesn't). install.sh (a prebuilt release-binary download, not a
+      # from-source build — `cargo install fledge` compiled ~355
+      # dependencies including wasmtime and was the actual cause of this
+      # job's original 10-minute runs) always resolves "latest" via an
+      # unauthenticated GitHub API call with no way to pin a version —
+      # confirmed hitting that rate limit (60 req/hr/IP) after this
+      # session's own run volume: "Error: could not determine latest
+      # version" on two consecutive runs. Downloading a pinned release
+      # binary directly sidesteps the lookup entirely; bump FLEDGE_VERSION
+      # occasionally rather than always tracking latest. rune has neither
+      # an action.yml nor an install.sh (it's a Ruby gem);
+      # `fledge plugins install` is still the only documented path for it.
       - name: Install fledge + plugins
+        env:
+          FLEDGE_VERSION: v1.7.2
         run: |
-          curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
+          curl -fsSL "https://github.com/CorvidLabs/fledge/releases/download/${FLEDGE_VERSION}/fledge-linux-x86_64" -o /usr/local/bin/fledge
+          chmod +x /usr/local/bin/fledge
           fledge plugins install --non-interactive --yes CorvidLabs/rune
 
       - name: Install magpie engine deps
@@ -114,15 +123,17 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      # Same install.sh as the linux job (prebuilt binary, not a from-source
-      # build) rather than brew — avoids brew's own overhead and the
-      # unrelated "untrusted tap" warning noise a prior run showed.
-      # fledge-plugin-http (Swift) has neither an action.yml nor an
-      # install.sh; `fledge plugins install` is still the only documented
-      # path for it.
+      # Same pinned-download reasoning as the linux job's Install step —
+      # see its comment. Also avoids brew's own overhead and the unrelated
+      # "untrusted tap" warning noise a prior run showed. fledge-plugin-http
+      # (Swift) has neither an action.yml nor an install.sh;
+      # `fledge plugins install` is still the only documented path for it.
       - name: Install fledge + plugins
+        env:
+          FLEDGE_VERSION: v1.7.2
         run: |
-          curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
+          curl -fsSL "https://github.com/CorvidLabs/fledge/releases/download/${FLEDGE_VERSION}/fledge-macos-aarch64" -o /usr/local/bin/fledge
+          chmod +x /usr/local/bin/fledge
           fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
 
       - name: Install magpie engine deps
@@ -173,8 +184,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
+      # Same pinned-download reasoning as the other two jobs' Install
+      # steps — see the linux job's comment.
       - name: Install fledge
-        run: curl -fsSL https://raw.githubusercontent.com/CorvidLabs/fledge/main/install.sh | sh
+        env:
+          FLEDGE_VERSION: v1.7.2
+        run: |
+          curl -fsSL "https://github.com/CorvidLabs/fledge/releases/download/${FLEDGE_VERSION}/fledge-linux-x86_64" -o /usr/local/bin/fledge
+          chmod +x /usr/local/bin/fledge
 
       - name: Install deps
         run: bun install

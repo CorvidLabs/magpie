@@ -279,7 +279,9 @@ if (shouldRun("ios")) {
   const down = agent.get("shutdown")!;
   const cmdDown = agent.command(down.name, { device: device.udid })!;
   const eDown = await exec(cmdDown);
-  record({ target: "ios", skill: down.name, z: down.z, routedVia: null, command: cmdDown, exitCode: eDown.exitCode, ok: eDown.exitCode === 0 && !eDown.timedOut, note: eDown.timedOut ? "timed out — killed after 120s, see exec()'s own timeout" : "shut down, no simulator left running", durationMs: eDown.durationMs, artifacts: [] });
+  const downOk = eDown.exitCode === 0 && !eDown.timedOut;
+  const downNote = eDown.timedOut ? "timed out — killed after 120s, see exec()'s own timeout" : downOk ? "shut down, no simulator left running" : (eDown.stderr.trim() || eDown.stdout.trim()).slice(0, 200);
+  record({ target: "ios", skill: down.name, z: down.z, routedVia: null, command: cmdDown, exitCode: eDown.exitCode, ok: downOk, note: downNote, durationMs: eDown.durationMs, artifacts: [] });
 }
 
 // ============================== Android ==============================
@@ -327,3 +329,14 @@ for (const [target, steps] of byTarget) {
   log(`  ${target}: ${pass}/${steps.length} ${pass === steps.length ? "OK" : "CHECK"}`);
 }
 log(`\nfull report: ${outDir}/report.json`);
+
+// Real gap this caught itself on: nothing above ever called process.exit,
+// so a run with a genuine FAIL (not a hang, not a timeout — an actual
+// non-zero exit from a real command) still exited 0 and GitHub Actions
+// reported the whole job green. Every PASS/FAIL in this report was
+// cosmetic from CI's perspective until now.
+const failed = results.filter((r) => !r.ok);
+if (failed.length > 0) {
+  log(`\n${failed.length} step(s) failed: ${failed.map((r) => `${r.target}/${r.skill}`).join(", ")}`);
+  process.exit(1);
+}

@@ -41,8 +41,11 @@ Record {seconds} seconds of video to {path}. `simctl io recordVideo` blocks
 until interrupted, so this wraps it with a bounded background-then-kill.
 Requires [[z=2|open]].
 
-@plane z=5 label="shutdown" kind=skill triggers="shutdown, stop, teardown, cleanup" inputs="device:string" tool="xcrun simctl shutdown {device}"
+@plane z=5 label="shutdown" kind=skill triggers="shutdown, stop, teardown, cleanup" inputs="device:string" tool="sh scripts/ios-shutdown.sh {device}"
 # Skill: shutdown
 
-Shut the simulator back down. Always run this last regardless of prior
-failures, so a test run never leaves a simulator running. See [[z=1|boot]].
+Shut the simulator back down, with one retry after a short wait if the
+first attempt fails (see scripts/ios-shutdown.sh — a real CI run hit this
+right after [[z=4|record]]'s own SIGKILL fallback ran). Always run this
+last regardless of prior failures, so a test run never leaves a simulator
+running. See [[z=1|boot]].

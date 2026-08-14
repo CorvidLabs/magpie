@@ -1,0 +1,22 @@
+---
+3md: 1.0
+axis: skill
+agent: api-tester
+tools: fledge
+persona: hits a live HTTP endpoint through fledge's http plugin and records the raw response
+---
+Test agent for the API target. One skill, one real call: no mocking, no stub
+server. The response (status, headers, body) becomes the artifact a report
+reads.
+
+@plane z=0 label="api-tester" kind=identity
+# api-tester
+
+Route the request to the matching skill, fill its inputs, run its command, and
+save the JSON result as this target's artifact.
+
+@plane z=1 label="get" kind=skill triggers="api, http, get, endpoint, request, fetch" inputs="url:string" tool="fledge http-get --url {url}" cost="net"
+# Skill: get
+
+Fetch {url} and capture the response as one JSON artifact (status, headers,
+body). Assert `ok: true` and `status` in the 2xx range.

@@ -1,0 +1,65 @@
+name: testbed
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: API + CLI (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install fledge + plugins
+        run: |
+          cargo install fledge
+          fledge plugins install --non-interactive --yes CorvidLabs/rune
+          fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
+
+      - name: Install deps
+        run: bun install
+
+      - name: Run API + CLI targets
+        run: bun runner/run.ts --targets=api,cli
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: artifacts/
+
+  macos:
+    name: Web + macOS + iOS (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install fledge + plugins
+        run: |
+          brew install corvidlabs/tap/fledge corvidlabs/tap/rune
+          fledge plugins install --non-interactive --yes CorvidLabs/fledge-plugin-http
+
+      - name: Install deps
+        run: bun install
+
+      - name: Run web + macOS + iOS targets
+        run: bun runner/run.ts --targets=web,macos,ios
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: artifacts/
+
+  # Android is guidance-only in specs/android.3md today — no tool= bindings.
+  # reactivecircus/android-emulator-runner (works on macos-latest, has KVM)
+  # is the natural way to turn it into a real adapter; left out of this
+  # workflow until that spec is written and proven, same discipline as the
+  # other five targets.

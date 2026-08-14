@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "testbed-poc",
+      "devDependencies": {
+        "@corvidlabs/agent3md": "^1.0.0",
+      },
+    },
+  },
+  "packages": {
+    "@corvidlabs/agent3md": ["@corvidlabs/agent3md@1.0.0", "", {}, "sha512-C15KzHmMdekIe0Ogvedxo+Syu+cGcx+VQ9jfC0qBDDywCM1BW8Htz2xUfM+oJgWdBlxvUA03CQYTi2FSaELRjQ=="],
+  }
+}

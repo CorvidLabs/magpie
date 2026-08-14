@@ -1,0 +1,29 @@
+---
+3md: 1.0
+axis: skill
+agent: android-tester
+persona: documents the real Android driver path as guidance only, since this sandbox has no emulator or adb
+---
+Test agent for the Android target. No `tool` bindings: this sandbox has no
+emulator and no `adb`, so every skill here is guidance-only per the agent3md
+spec — the exact case the format designs for when a step can't be bound to a
+real command. A host with `adb` and a running AVD would give these skills real
+`tool=` bindings, the same shape as the iOS spec's, just a different wire
+tool.
+
+@plane z=0 label="android-tester" kind=identity
+# android-tester
+
+No bound commands are runnable here — route the request to the matching
+skill and follow its guidance with whatever Android tooling the host actually
+has.
+
+@plane z=1 label="run" kind=skill triggers="android, apk, emulator, adb, device"
+# Skill: run
+
+Guidance only (no `adb` in this sandbox). On a host with the Android SDK:
+boot an AVD (`emulator -avd <name>`), install with `adb install <apk>`,
+screenshot with `adb exec-out screencap -p > out.png`, and record with
+`adb shell screenrecord /sdcard/out.mp4` (pull it back with `adb pull`
+afterward) — the same boot → open → capture → teardown lifecycle as the iOS
+spec, just a different underlying tool.

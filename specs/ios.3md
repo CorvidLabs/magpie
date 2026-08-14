@@ -1,0 +1,46 @@
+---
+3md: 1.0
+axis: skill
+agent: ios-tester
+tools: xcrun, sh
+persona: drives a real iOS Simulator end to end — boot, load, screenshot, record, shut down
+---
+Test agent for the iOS Simulator target, using `xcrun simctl` directly rather
+than Appium/WebDriverAgent, since simctl already ships with Xcode and needs no
+extra install. The five skills are one lifecycle: boot depends on nothing,
+everything else depends transitively on it.
+
+@plane z=0 label="ios-tester" kind=identity
+# ios-tester
+
+Boot the simulator, point it at a URL, capture a screenshot and a short video,
+then shut it down again so no simulator is left running after the test.
+
+@plane z=1 label="boot" kind=skill triggers="boot, simulator, ios, start, device" inputs="device:string" tool="xcrun simctl boot {device}"
+# Skill: boot
+
+Boot the simulator identified by {device} (a UDID). simctl errors if it is
+already booted, which is itself a legitimate, reportable state.
+
+@plane z=2 label="open" kind=skill triggers="open, url, load, safari, mobile" inputs="device:string, url:string" tool="xcrun simctl openurl {device} {url}"
+# Skill: open
+
+Open {url} in the simulator's Safari. Requires [[z=1|boot]] to have completed.
+
+@plane z=3 label="screenshot" kind=skill triggers="screenshot, snapshot, capture, image" inputs="device:string, path:string" tool="xcrun simctl io {device} screenshot {path}" cost="fs"
+# Skill: screenshot
+
+Screenshot the simulator's current frame to {path}. Requires [[z=2|open]].
+
+@plane z=4 label="record" kind=skill triggers="video, record, recording, screen capture" inputs="device:string, path:string, seconds:number" tool="sh scripts/ios-record.sh {device} {path} {seconds}" cost="fs"
+# Skill: record
+
+Record {seconds} seconds of video to {path}. `simctl io recordVideo` blocks
+until interrupted, so this wraps it with a bounded background-then-kill.
+Requires [[z=2|open]].
+
+@plane z=5 label="shutdown" kind=skill triggers="shutdown, stop, teardown, cleanup" inputs="device:string" tool="xcrun simctl shutdown {device}"
+# Skill: shutdown
+
+Shut the simulator back down. Always run this last regardless of prior
+failures, so a test run never leaves a simulator running. See [[z=1|boot]].

@@ -1,0 +1,30 @@
+---
+3md: 1.0
+axis: skill
+agent: cli-tester
+tools: fledge
+persona: runs a real binary inside a PTY via rune and checks stdout, stderr, and exit code
+---
+Test agent for the CLI target. Every step wraps the binary under test in
+`fledge rune run` so output is captured identically to a real terminal, even
+for tools that behave differently when not attached to a TTY.
+
+@plane z=0 label="cli-tester" kind=identity
+# cli-tester
+
+Run the bound command through rune with a bounded timeout, capture
+`clean_output` and the exit code, then assert against the expected pattern.
+
+@plane z=1 label="version" kind=skill triggers="cli, version, binary" inputs="binary:string" tool="fledge rune run --timeout=15 --json -- {binary} --version" cost="proc"
+# Skill: version
+
+Run `{binary} --version` and assert stdout contains a version string. Proves
+the CLI adapter works for any installed binary, not just one hardcoded tool.
+
+@plane z=2 label="status" kind=skill triggers="git, status, repo, branch" tool="fledge rune run --timeout=15 --json -- git status --short --branch" cost="proc"
+# Skill: status
+
+A bare command with no placeholders — still a valid `tool` per spec. Exit code
+0 means a clean git repo; a "not a git repository" error is itself a
+legitimate, reportable outcome here, not a harness failure. See
+[[z=1|version]] for the parameterized case.

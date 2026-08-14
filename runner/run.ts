@@ -75,19 +75,30 @@ async function runGeneric(): Promise<void> {
     await mkdir(`${outDir}/${dir}`, { recursive: true });
     const skills = [...agent.manifest().skills].sort((a, b) => a.z - b.z);
     for (const s of skills) {
+      // cost="expected-fail" is magpie's own convention (cost is a free-form
+      // tag per the agent3md spec, not a closed set), not a formal part of
+      // agent.3md itself: a shared engine running someone else's specs
+      // can't know their skills' intent, but a spec author CAN mark "this
+      // one is a deliberate negative test case" so its failure is still
+      // honestly reported but doesn't fail the whole job — the same
+      // critical:false reasoning as ios/open and ios/shutdown below, just
+      // driven by the spec instead of hardcoded per-skill JS.
+      const expectedFail = s.cost === "expected-fail";
       if (!s.tool) {
         record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: null, exitCode: null, ok: true, note: "guidance-only, skipped (no tool=)", durationMs: 0, artifacts: [] });
         continue;
       }
       const cmd = agent.command(s.name)!;
       if (/\{[a-zA-Z_]+\}/.test(cmd)) {
-        record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: null, ok: false, note: "skipped: unfilled {placeholder} — generic mode only runs bare tool= commands", durationMs: 0, artifacts: [] });
+        // Not run, so not really a failure either — an engine limitation
+        // notice, not a broken assertion.
+        record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: null, ok: true, note: "skipped: unfilled {placeholder} — generic mode only runs bare tool= commands", durationMs: 0, artifacts: [] });
         continue;
       }
       const e = await exec(cmd);
       const logPath = `${outDir}/${dir}/${s.name}.log`;
       await Bun.write(logPath, `$ ${cmd}\n\n--- stdout ---\n${e.stdout}\n--- stderr ---\n${e.stderr}\n`);
-      record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: e.exitCode, ok: e.exitCode === 0, note: (e.stdout.trim() || e.stderr.trim()).slice(0, 200), durationMs: e.durationMs, artifacts: [logPath] });
+      record({ target: dir, skill: s.name, z: s.z, routedVia: null, command: cmd, exitCode: e.exitCode, ok: e.exitCode === 0, note: (e.stdout.trim() || e.stderr.trim()).slice(0, 200), durationMs: e.durationMs, artifacts: [logPath], critical: !expectedFail });
     }
   }
 }

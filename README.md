@@ -83,8 +83,9 @@ runner/run.ts    loads each spec with @corvidlabs/agent3md, routes, fills,
 runner/validate.ts  the fast, dependency-free check `fledge lanes run verify` runs —
                     every spec parses, no cycles, no unfilled placeholders left dangling
 fledge.toml, AGENTS.md, .trust.toml, .augur.toml, .attest.json
-                 the CorvidLabs trust toolchain (`fledge trust adopt`) — Spec Sync is the
-                 one piece deliberately not adopted here; see AGENTS.md's "Current milestone"
+                 the CorvidLabs trust toolchain (`fledge trust adopt`), contract gate included
+module-specs/    real Spec Sync module contracts for this engine's own source (runner/*.ts) —
+                 not specs/, which already means something else here; see its own context.md
 ```
 
 ## Using this in another repo

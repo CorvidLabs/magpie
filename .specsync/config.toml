@@ -1,0 +1,21 @@
+# spec-sync v4 configuration
+# Docs: https://github.com/CorvidLabs/spec-sync
+
+# Not "specs" — that directory already means something else here
+# (magpie's own agent3md test specs, specs/*.3md), colliding with
+# spec-sync's own convention. This is exactly the blocker recorded in
+# .trust.toml when spec-sync was first (deliberately) skipped; resolved
+# by pointing spec-sync's own specs_dir elsewhere rather than relocating
+# magpie's specs/ (which is load-bearing throughout runner/run.ts's own
+# --specs-dir default-value logic, this README, and every spec file).
+specs_dir = "module-specs"
+# magpie's real application source — the engine itself, not the specs it
+# executes.
+source_dirs = ["runner"]
+exclude_dirs = []
+exclude_patterns = []
+required_sections = ["Purpose", "Public API", "Invariants", "Behavioral Examples", "Error Cases", "Dependencies", "Change Log"]
+enforcement = "strict"
+
+[lifecycle]
+track_history = false

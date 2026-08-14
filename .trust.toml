@@ -5,9 +5,8 @@ profile = "standard"
 command = ["fledge", "lanes", "run", "verify"]
 
 [contract]
-enabled = false
-require_coverage = 0
-skip_reason = "specs/ is already agent3md test specs, not spec-sync module contracts \u2014 would need a directory split to adopt spec-sync cleanly"
+enabled = true
+require_coverage = 100
 
 [risk]
 threshold = "block"

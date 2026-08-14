@@ -43,22 +43,26 @@ command for real.
 
 ## Dogfood
 
-MacNTop (macOS target) and fledge itself (CLI target) are the first two
-pilot repos consuming magpie's generic engine —
-[MacNTop#7](https://github.com/CorvidLabs/MacNTop/pull/7),
-[fledge#510](https://github.com/CorvidLabs/fledge/pull/510). A private
-sandbox, `CorvidLabs/magpie-sandbox`, proves the `workflow_call` mechanism
-itself on every push before either PR needs to be trusted blind.
+`CorvidLabs/magpie-sandbox` (private, disposable, "break freely") is
+where the engine gets exercised now — real dogfood PRs against MacNTop
+and fledge were tried first, closed after real spec-sync/trust governance
+friction on their end turned out to be more than the pilots were worth;
+revisit real-repo dogfooding once the engine itself (and step-authoring
+ergonomics — see `.steps.toml`) are more proven out. The sandbox's own
+two jobs mirror the exact `with:` blocks those two PRs used, so the
+`workflow_call` mechanism itself stays proven without needing a real,
+governed repo in the loop.
 
 ## Current milestone
 
-All six targets have real (non-guidance) adapters as of this pass —
-Android (`adb` via a live emulator) was the last one to move off
-guidance-only. `specs/` intentionally collides in name with Spec Sync's
-own convention (module contracts), which is why Spec Sync isn't adopted
-here yet (`--no-specs` was passed to `fledge trust adopt`, with the
-reason recorded in `.trust.toml`) — resolving that needs a directory
-split, not a config trick.
+All six targets have real (non-guidance) adapters — Android (`adb` via a
+live emulator) was the last one to move off guidance-only. Spec Sync
+*is* adopted here now (`module-specs/`, not `specs/` — see
+`module-specs/runner/context.md` for why), covering the engine's own
+source (`runner/*.ts`) with `fledge spec check` passing at 100% coverage.
+`.steps.toml` is the newest piece: a much lower-friction way to author a
+generic-mode spec, after hand-writing raw `.3md` caused three separate
+accidental dependency-cycle mistakes this project's own history.
 
 <!-- CorvidLabs trust toolchain: BEGIN (managed, do not edit inside) -->
 ## CorvidLabs trust toolchain

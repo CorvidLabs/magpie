@@ -149,7 +149,16 @@ jobs:
     # distinction needed here — unlike inputs.*, this doesn't hit the
     # null-coercion trap documented above.
     if: ${{ github.repository == 'CorvidLabs/magpie' }}
-    runs-on: macos-latest
+    # NOT macos-latest — that was the first attempt and it fails every
+    # time: "HVF error: HV_UNSUPPORTED" / "failed to initialize HVF".
+    # GitHub's hosted macOS runners are themselves VMs and don't support
+    # nested virtualization for Hypervisor.framework, so hardware-
+    # accelerated Android emulation is fundamentally unavailable there,
+    # not a config problem. ubuntu-latest supports KVM acceleration for
+    # Android emulators — the standard, documented pattern for this
+    # action — hence the "Enable KVM" step below and arch: x86_64 to
+    # match the runner's actual hardware.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -161,19 +170,23 @@ jobs:
       - name: Install deps
         run: bun install
 
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       # reactivecircus/android-emulator-runner owns the emulator's whole
       # boot -> script -> shutdown lifecycle inside this one step (unlike
       # simctl, there's no persistent OS-level emulator to boot in an
-      # earlier step and reuse in a later one). arm64-v8a matches
-      # macos-latest's Apple Silicon hardware — x86_64 emulation there
-      # would be much slower.
+      # earlier step and reuse in a later one).
       - name: Run Android target (emulator boots and shuts down within this step)
         timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           target: google_apis
-          arch: arm64-v8a
+          arch: x86_64
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader-indirect -noaudio -no-boot-anim
           script: bun runner/run.ts --targets=android

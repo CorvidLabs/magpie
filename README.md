@@ -37,10 +37,14 @@ Runs on GitHub-hosted runners, not anyone's laptop.
     unlike `simctl`, that action owns the whole boot/shutdown lifecycle
     itself, so there's no separate boot/teardown skill the way iOS has one
 - **CI, not a laptop.** `.github/workflows/test.yml` splits targets across
-  GitHub-hosted runners: `ubuntu-latest` runs CLI, `macos-latest` runs
-  API/web/macOS/iOS (Xcode + simulators ship preinstalled), and a third
-  `android` job runs on `macos-latest` too (matches its Apple Silicon
-  hardware for `arch: arm64-v8a`). `fledge` itself is installed via its
+  GitHub-hosted runners: `ubuntu-latest` runs CLI and, in a separate job,
+  Android (KVM-accelerated emulator); `macos-latest` runs API/web/macOS/iOS
+  (Xcode + simulators ship preinstalled). Android's job specifically needs
+  to be Linux, not macOS: the first attempt put it on `macos-latest` and
+  failed every time with `HVF error: HV_UNSUPPORTED` — GitHub's hosted
+  macOS runners are themselves VMs and don't support nested virtualization
+  for Hypervisor.framework, so hardware-accelerated Android emulation is
+  fundamentally unavailable there. `fledge` itself is installed via its
   `install.sh` (a prebuilt release binary) rather than `cargo install` or
   `brew` — the cargo path alone was a confirmed 10-minute job, compiling
   ~355 dependencies from source every run. API moved off Linux after the

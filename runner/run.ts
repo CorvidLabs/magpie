@@ -92,15 +92,27 @@ async function loadAgent(specPath: string): Promise<Agent> {
   return new Agent(src);
 }
 
-async function exec(cmd: string) {
+// Default 2 minutes: a real, observed CI run needed 82s for a single
+// legitimately-slow (not hung) `ios/open` retry, so this needs real
+// margin above that — but every exec() call used to have NO timeout at
+// all, and two different `simctl` operations (record's background
+// process, and a bare `shutdown` call) have each independently hung past
+// their surrounding step's own timeout on a real run, burning the full
+// remaining budget before anything else could report. Bounding every
+// command here, once, beats hardening each risky call site individually
+// as they're discovered one at a time.
+async function exec(cmd: string, timeoutMs = 120_000) {
   const start = performance.now();
   const proc = Bun.spawn(["/bin/sh", "-c", cmd], { stdout: "pipe", stderr: "pipe" });
+  const killer = setTimeout(() => proc.kill("SIGKILL"), timeoutMs);
   const [stdout, stderr, exitCode] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  return { stdout, stderr, exitCode, durationMs: Math.round(performance.now() - start) };
+  clearTimeout(killer);
+  const durationMs = Math.round(performance.now() - start);
+  return { stdout, stderr, exitCode, durationMs, timedOut: durationMs >= timeoutMs };
 }
 
 function record(r: StepResult) {
@@ -267,7 +279,7 @@ if (shouldRun("ios")) {
   const down = agent.get("shutdown")!;
   const cmdDown = agent.command(down.name, { device: device.udid })!;
   const eDown = await exec(cmdDown);
-  record({ target: "ios", skill: down.name, z: down.z, routedVia: null, command: cmdDown, exitCode: eDown.exitCode, ok: eDown.exitCode === 0, note: "shut down, no simulator left running", durationMs: eDown.durationMs, artifacts: [] });
+  record({ target: "ios", skill: down.name, z: down.z, routedVia: null, command: cmdDown, exitCode: eDown.exitCode, ok: eDown.exitCode === 0 && !eDown.timedOut, note: eDown.timedOut ? "timed out — killed after 120s, see exec()'s own timeout" : "shut down, no simulator left running", durationMs: eDown.durationMs, artifacts: [] });
 }
 
 // ============================== Android ==============================

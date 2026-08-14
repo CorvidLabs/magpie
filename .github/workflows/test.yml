@@ -1,5 +1,14 @@
 name: testbed
 
+# Matches fledge's own ci.yml convention: cancel a superseded run on a PR
+# branch (fast feedback while iterating), but let every push to main run
+# to completion (so main always has a full, bisectable CI verdict per
+# commit). This session's own rapid-fire pushes directly to main are
+# exactly the case this doesn't dedupe — that's the tradeoff, not a bug.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 on:
   push:
     branches: [main]

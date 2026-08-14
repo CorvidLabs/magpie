@@ -8,10 +8,17 @@ on:
   # Makes this a reusable workflow: another repo adds a job like
   #   dogfood:
   #     uses: CorvidLabs/magpie/.github/workflows/test.yml@main
-  #     with: { specs-dir: .magpie-specs, macos-targets: macos, linux-targets: '' }
+  #     with: { specs-dir: .magpie-specs, macos-targets: macos, linux-targets: none }
   # and points specs-dir at its OWN .3md specs (see README's "Using this in
   # another repo"). Defaults below match magpie's own self-test, so this
   # trigger changes nothing when the workflow runs on pushes/PRs here.
+  #
+  # The literal string "none" (not empty string) is what skips a job: GitHub
+  # Actions coerces a null `inputs.*` (the case on every non-workflow_call
+  # trigger — schema defaults only apply inside an actual workflow_call
+  # invocation) to '' for comparison, so `inputs.x != ''` is false and would
+  # wrongly skip both of magpie's own jobs on every plain push. Confirmed
+  # this the hard way: it happened on the first push that tried `!= ''`.
   workflow_call:
     inputs:
       specs-dir:
@@ -27,7 +34,7 @@ on:
 jobs:
   linux:
     name: CLI (ubuntu)
-    if: ${{ inputs.linux-targets != '' }}
+    if: ${{ inputs.linux-targets != 'none' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -75,7 +82,7 @@ jobs:
 
   macos:
     name: API + Web + macOS + iOS (macos)
-    if: ${{ inputs.macos-targets != '' }}
+    if: ${{ inputs.macos-targets != 'none' }}
     runs-on: macos-latest
     timeout-minutes: 20
     steps:

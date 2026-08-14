@@ -92,8 +92,8 @@ jobs:
     uses: CorvidLabs/magpie/.github/workflows/test.yml@main
     with:
       specs-dir: .magpie-specs   # avoid colliding with an existing specs/ (e.g. Spec Sync's)
-      macos-targets: macos       # empty string skips a job entirely
-      linux-targets: ''
+      macos-targets: macos       # the literal string "none" skips a job entirely
+      linux-targets: none        # (not empty string — see test.yml's own comment on why)
 ```
 
 The reusable workflow checks out `CorvidLabs/magpie` into `.magpie-engine/`
